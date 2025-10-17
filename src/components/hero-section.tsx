@@ -38,9 +38,11 @@ export const HeroSection = () => {
             Start Trading
           </Button>
         </Link>
-        <Button variant="secondary" size="lg" className="bg-white/10 text-white border-white/20 hover:bg-white/20 backdrop-blur-sm">
-          Learn More
-        </Button>
+        <Link to="/demo">
+          <Button variant="secondary" size="lg" className="bg-white/10 text-white border-white/20 hover:bg-white/20 backdrop-blur-sm">
+            Watch Demo
+          </Button>
+        </Link>
       </div>
 
       {/* Feature cards */}

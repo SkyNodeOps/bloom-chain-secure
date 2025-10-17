@@ -86,30 +86,93 @@ export async function encryptVaultData(
   }
 ) {
   try {
+    console.log('🚀 Starting FHE vault data encryption process...');
+    console.log('📊 Input data:', {
+      contractAddress,
+      userAddress,
+      data
+    });
+    
+    console.log('🔄 Step 1: Creating encrypted input...');
     const input = instance.createEncryptedInput(contractAddress, userAddress);
+    console.log('✅ Step 1 completed: Encrypted input created');
+    
+    console.log('🔄 Step 2: Adding encrypted data...');
+    
+    // Validate all values are within 32-bit range
+    const max32Bit = 4294967295; // 2^32 - 1
     
     if (data.riskScore !== undefined) {
-      input.add32(data.riskScore);
-    }
-    if (data.amount !== undefined) {
-      input.add32(data.amount);
-    }
-    if (data.securityScore !== undefined) {
-      input.add32(data.securityScore);
-    }
-    if (data.severity !== undefined) {
-      input.add32(data.severity);
+      console.log('📊 Adding risk score:', data.riskScore);
+      if (data.riskScore > max32Bit) {
+        throw new Error(`Risk score ${data.riskScore} exceeds 32-bit limit`);
+      }
+      input.add32(BigInt(data.riskScore));
     }
     
+    if (data.amount !== undefined) {
+      console.log('📊 Adding amount:', data.amount);
+      if (data.amount > max32Bit) {
+        throw new Error(`Amount ${data.amount} exceeds 32-bit limit`);
+      }
+      input.add32(BigInt(data.amount));
+    }
+    
+    if (data.securityScore !== undefined) {
+      console.log('📊 Adding security score:', data.securityScore);
+      if (data.securityScore > max32Bit) {
+        throw new Error(`Security score ${data.securityScore} exceeds 32-bit limit`);
+      }
+      input.add32(BigInt(data.securityScore));
+    }
+    
+    if (data.severity !== undefined) {
+      console.log('📊 Adding severity:', data.severity);
+      if (data.severity > max32Bit) {
+        throw new Error(`Severity ${data.severity} exceeds 32-bit limit`);
+      }
+      input.add32(BigInt(data.severity));
+    }
+    
+    console.log('✅ Step 2 completed: All data added to encrypted input');
+    
+    console.log('🔄 Step 3: Encrypting data...');
     const encryptedInput = await input.encrypt();
+    console.log('✅ Step 3 completed: Data encrypted successfully');
+    console.log('📊 Encrypted handles count:', encryptedInput.handles.length);
+    
+    console.log('🔄 Step 4: Converting handles to hex format...');
+    const handles = encryptedInput.handles.map((handle, index) => {
+      const hex = convertHex(handle);
+      console.log(`📊 Handle ${index}: ${hex.substring(0, 10)}... (${hex.length} chars)`);
+      return hex;
+    });
+    
+    const proof = `0x${Array.from(encryptedInput.inputProof)
+      .map((b: number) => b.toString(16).padStart(2, '0')).join('')}`;
+    console.log('📊 Proof length:', proof.length);
+    
+    console.log('🎉 Vault data encryption completed successfully!');
+    console.log('📊 Final result:', {
+      handlesCount: handles.length,
+      proofLength: proof.length,
+      handles: handles.map(h => h.substring(0, 10) + '...')
+    });
     
     return {
-      handles: encryptedInput.handles.map(convertHex),
-      inputProof: `0x${Array.from(encryptedInput.inputProof)
-        .map(b => b.toString(16).padStart(2, '0')).join('')}`
+      handles,
+      inputProof: proof
     };
   } catch (error) {
-    console.error('FHE encryption failed:', error);
+    console.error('❌ FHE vault data encryption failed:', error);
+    console.error('📊 Error details:', {
+      name: error?.name,
+      message: error?.message,
+      stack: error?.stack,
+      contractAddress,
+      userAddress,
+      data
+    });
     throw error;
   }
 }
@@ -122,16 +185,173 @@ export async function decryptVaultData(
   userAddress: string
 ) {
   try {
-    const handleContractPairs = encryptedData.map(handle => ({
-      handle: convertHex(handle),
-      contractAddress
-    }));
+    console.log('🚀 Starting FHE vault data decryption process...');
+    console.log('📊 Input parameters:', {
+      encryptedDataLength: encryptedData.length,
+      contractAddress,
+      userAddress
+    });
     
+    console.log('🔄 Step 1: Building handle-contract pairs...');
+    const handleContractPairs = encryptedData.map((handle, index) => {
+      const hex = convertHex(handle);
+      console.log(`📊 Handle ${index}: ${hex.substring(0, 10)}... (${hex.length} chars)`);
+      return {
+        handle: hex,
+        contractAddress
+      };
+    });
+    console.log('✅ Step 1 completed: Handle-contract pairs built');
+    console.log('📊 Pairs count:', handleContractPairs.length);
+    
+    console.log('🔄 Step 2: Decrypting handles...');
     const result = await instance.userDecrypt(handleContractPairs, userAddress);
+    console.log('✅ Step 2 completed: Handles decrypted');
+    console.log('📊 Decryption result keys:', Object.keys(result || {}));
     
+    console.log('🔄 Step 3: Parsing decrypted data...');
+    const decryptedData = {
+      riskScore: result[handleContractPairs[0]?.handle]?.toString() || '0',
+      amount: result[handleContractPairs[1]?.handle]?.toString() || '0',
+      securityScore: result[handleContractPairs[2]?.handle]?.toString() || '0',
+      severity: result[handleContractPairs[3]?.handle]?.toString() || '0'
+    };
+    console.log('✅ Step 3 completed: Data parsed successfully');
+    console.log('📊 Decrypted data:', decryptedData);
+    
+    console.log('🎉 Vault data decryption completed successfully!');
     return result;
   } catch (error) {
-    console.error('FHE decryption failed:', error);
+    console.error('❌ FHE vault data decryption failed:', error);
+    console.error('📊 Error details:', {
+      name: error?.name,
+      message: error?.message,
+      stack: error?.stack,
+      encryptedDataLength: encryptedData.length,
+      contractAddress,
+      userAddress
+    });
     throw error;
+  }
+}
+
+// Carbon offset trading encryption (参考fantasy-vault-trade实现)
+export async function encryptCarbonOrder(
+  instance: any,
+  contractAddress: string,
+  userAddress: string,
+  orderData: {
+    orderType: number; // 1: Buy, 2: Sell
+    quantity: number; // Tons of CO2
+    price: number; // Price per ton * 100
+    offsetSymbol: string; // Offset symbol
+  }
+) {
+  try {
+    console.log('🚀 Starting FHE carbon order encryption process...');
+    console.log('📊 Input data:', {
+      contractAddress,
+      userAddress,
+      orderData
+    });
+    
+    console.log('🔄 Step 1: Creating encrypted input...');
+    const input = instance.createEncryptedInput(contractAddress, userAddress);
+    console.log('✅ Step 1 completed: Encrypted input created');
+    
+    console.log('🔄 Step 2: Adding encrypted data...');
+    
+    // Validate all values are within 32-bit range
+    const max32Bit = 4294967295; // 2^32 - 1
+    
+    console.log('📊 Adding order type:', orderData.orderType);
+    if (orderData.orderType > max32Bit) {
+      throw new Error(`Order type ${orderData.orderType} exceeds 32-bit limit`);
+    }
+    input.add32(BigInt(orderData.orderType));
+    
+    console.log('📊 Adding quantity:', orderData.quantity);
+    if (orderData.quantity > max32Bit) {
+      throw new Error(`Quantity ${orderData.quantity} exceeds 32-bit limit`);
+    }
+    input.add32(BigInt(orderData.quantity));
+    
+    const priceInCents = Math.floor(orderData.price * 100);
+    console.log('📊 Adding price (in cents):', priceInCents);
+    if (priceInCents > max32Bit) {
+      throw new Error(`Price ${priceInCents} exceeds 32-bit limit`);
+    }
+    input.add32(BigInt(priceInCents));
+    
+    const symbolValue = getStringValue(orderData.offsetSymbol);
+    console.log('📊 Adding offset symbol (converted):', symbolValue);
+    if (symbolValue > max32Bit) {
+      throw new Error(`Offset symbol value ${symbolValue} exceeds 32-bit limit`);
+    }
+    input.add32(BigInt(symbolValue));
+    
+    console.log('✅ Step 2 completed: All data added to encrypted input');
+    
+    console.log('🔄 Step 3: Encrypting data...');
+    const encryptedInput = await input.encrypt();
+    console.log('✅ Step 3 completed: Data encrypted successfully');
+    console.log('📊 Encrypted handles count:', encryptedInput.handles.length);
+    
+    console.log('🔄 Step 4: Converting handles to hex format...');
+    const handles = encryptedInput.handles.map((handle, index) => {
+      const hex = convertHex(handle);
+      console.log(`📊 Handle ${index}: ${hex.substring(0, 10)}... (${hex.length} chars)`);
+      return hex;
+    });
+    
+    const proof = `0x${Array.from(encryptedInput.inputProof)
+      .map((b: number) => b.toString(16).padStart(2, '0')).join('')}`;
+    console.log('📊 Proof length:', proof.length);
+    
+    console.log('🎉 Carbon order encryption completed successfully!');
+    console.log('📊 Final result:', {
+      handlesCount: handles.length,
+      proofLength: proof.length,
+      handles: handles.map(h => h.substring(0, 10) + '...')
+    });
+    
+    return { handles, proof };
+  } catch (error) {
+    console.error('❌ FHE carbon order encryption failed:', error);
+    console.error('📊 Error details:', {
+      name: error?.name,
+      message: error?.message,
+      stack: error?.stack,
+      orderData
+    });
+    throw error;
+  }
+}
+
+// Test FHE functionality (参考fantasy-vault-trade实现)
+export async function testFHEFunctionality(instance: any) {
+  try {
+    console.log('🧪 Testing FHE functionality...');
+    
+    const testData = {
+      orderType: 1,
+      quantity: 100,
+      price: 12.50,
+      offsetSymbol: 'AMAZON'
+    };
+    
+    // Test encryption
+    const encrypted = await encryptCarbonOrder(
+      instance,
+      '0x0000000000000000000000000000000000000000', // Test address
+      '0x0000000000000000000000000000000000000000', // Test user
+      testData
+    );
+    
+    console.log('✅ FHE Test Successful! Encrypted', encrypted.handles.length, 'handles');
+    return true;
+  } catch (error) {
+    console.error('❌ FHE Test Failed:', error);
+    return false;
   }
 }

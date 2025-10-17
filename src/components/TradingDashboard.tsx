@@ -21,6 +21,7 @@ import { useAccount } from 'wagmi';
 import { useZamaInstance } from '../hooks/useZamaInstance';
 import { useContract } from '../lib/contract';
 import { encryptCarbonOrder, testFHEFunctionality } from '../lib/fhe-utils';
+import { useWriteContract } from 'wagmi';
 
 interface CarbonOffset {
   symbol: string;
@@ -45,6 +46,7 @@ interface Portfolio {
 export const TradingDashboard = () => {
   const { address, isConnected } = useAccount();
   const { instance, isLoading: fheLoading, error: fheError } = useZamaInstance();
+  const { writeContractAsync } = useWriteContract();
   const [carbonOffsets, setCarbonOffsets] = useState<CarbonOffset[]>([]);
   const [portfolio, setPortfolio] = useState<Portfolio>({
     totalOffsets: 0,
@@ -209,15 +211,50 @@ export const TradingDashboard = () => {
       console.log('✅ Step 1 completed: Order data encrypted successfully');
       console.log('📊 Encrypted handles:', encryptedData.handles.length);
 
-      // Here you would call the actual contract function
-      // For now, we'll simulate the success
-      console.log('🔄 Step 2: Simulating contract call...');
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+      // Call the actual contract function
+      console.log('🔄 Step 2: Calling smart contract...');
+      console.log('📊 Contract address:', '0x1FCDBE4160E1698dac93934e1a4d5F1291656b0D');
+      console.log('📊 Function: placeCarbonOrder');
+      console.log('📊 Args:', {
+        symbol: selectedOffset,
+        orderType: encryptedData.handles[0],
+        quantity: encryptedData.handles[1],
+        price: encryptedData.handles[2],
+        proof: encryptedData.proof
+      });
+
+      const tx = await writeContractAsync({
+        address: '0x1FCDBE4160E1698dac93934e1a4d5F1291656b0D' as `0x${string}`,
+        abi: [
+          {
+            "inputs": [
+              {"internalType": "string", "name": "_symbol", "type": "string"},
+              {"internalType": "bytes32", "name": "_orderType", "type": "bytes32"},
+              {"internalType": "bytes32", "name": "_quantity", "type": "bytes32"},
+              {"internalType": "bytes32", "name": "_price", "type": "bytes32"},
+              {"internalType": "bytes", "name": "_inputProof", "type": "bytes"}
+            ],
+            "name": "placeCarbonOrder",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+          }
+        ],
+        functionName: 'placeCarbonOrder',
+        args: [
+          selectedOffset,
+          encryptedData.handles[0] as `0x${string}`,
+          encryptedData.handles[1] as `0x${string}`,
+          encryptedData.handles[2] as `0x${string}`,
+          encryptedData.proof as `0x${string}`
+        ],
+      });
+
+      console.log('✅ Step 2 completed: Transaction submitted');
+      console.log('📊 Transaction hash:', tx);
+      console.log('🎉 Carbon offset order submitted to blockchain!');
       
-      console.log('✅ Step 2 completed: Order placed successfully');
-      console.log('🎉 Carbon offset order completed!');
-      
-      alert(`Order placed successfully!\n\n${selectedOffsetData.name}\n${orderAmount} tons at $${maxPrice}/ton\n\n🔒 All data encrypted with FHE`);
+      alert(`Order placed successfully!\n\n${selectedOffsetData.name}\n${orderAmount} tons at $${maxPrice}/ton\n\n🔒 All data encrypted with FHE\n\n📊 Transaction: ${tx}\n🔗 View on Etherscan: https://sepolia.etherscan.io/tx/${tx}`);
       setOrderAmount('');
       setMaxPrice('');
       setSelectedOffset('');

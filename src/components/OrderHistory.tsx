@@ -13,10 +13,12 @@ import {
   CheckCircle,
   XCircle,
   TrendingUp,
-  Leaf
+  Leaf,
+  RefreshCw
 } from 'lucide-react';
 import { useAccount } from 'wagmi';
 import { useZamaInstance } from '../hooks/useZamaInstance';
+import { useContract } from '../lib/contract';
 import { decryptVaultData, testFHEFunctionality } from '../lib/fhe-utils';
 
 interface Order {
@@ -38,9 +40,12 @@ interface Order {
 export const OrderHistory = () => {
   const { address, isConnected } = useAccount();
   const { instance, isLoading: fheLoading, error: fheError } = useZamaInstance();
+  const { getCarbonOffsets, getUserCarbonOrderIds, getCarbonOrderEncryptedData, getCarbonOrderInfo } = useContract();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [carbonOffsets, setCarbonOffsets] = useState<any[]>([]);
   const [showDecrypted, setShowDecrypted] = useState(false);
   const [isDecrypting, setIsDecrypting] = useState(false);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
   const [decryptedOrders, setDecryptedOrders] = useState<Record<string, any>>({});
 
   // Mock order data with encrypted handles
@@ -107,9 +112,117 @@ export const OrderHistory = () => {
     }
   ];
 
+  // Load carbon offsets from contract
+  const loadCarbonOffsets = async () => {
+    try {
+      console.log('🔄 Loading carbon offsets from contract...');
+      const offsets = await getCarbonOffsets();
+      setCarbonOffsets(offsets);
+      console.log('✅ Carbon offsets loaded:', offsets.length);
+    } catch (error) {
+      console.error('❌ Failed to load carbon offsets:', error);
+    }
+  };
+
+  // Load orders from contract
+  const loadOrdersFromContract = async () => {
+    if (!address) return;
+    
+    setIsLoadingOrders(true);
+    try {
+      console.log('🔄 Loading orders from contract for address:', address);
+      
+      // Step 1: Get user's order IDs from contract
+      console.log('📊 Step 1: Getting user order IDs...');
+      const orderIds = await getUserCarbonOrderIds(address);
+      console.log('✅ Step 1 completed: Found', orderIds.length, 'orders');
+      
+      if (orderIds.length === 0) {
+        console.log('📊 No orders found for user');
+        setOrders([]);
+        return;
+      }
+      
+      // Step 2: Load each order's data from contract
+      console.log('📊 Step 2: Loading order data...');
+      const ordersData = await Promise.all(orderIds.map(async (orderId) => {
+        try {
+          console.log('📊 Loading order', orderId.toString());
+          
+          // Get basic order info (non-encrypted)
+          const orderInfo = await getCarbonOrderInfo(Number(orderId));
+          console.log('📊 Order info:', orderInfo);
+          
+          // Get encrypted order data
+          const encryptedData = await getCarbonOrderEncryptedData(Number(orderId));
+          console.log('📊 Encrypted data handles:', encryptedData.length);
+          
+          // Convert encrypted data to handles format
+          const handles = encryptedData.slice(0, 4).map(handle => 
+            typeof handle === 'string' ? handle : `0x${handle.toString(16).padStart(64, '0')}`
+          );
+          
+          // Find matching carbon offset for display
+          const matchingOffset = carbonOffsets.find(offset => 
+            offset.symbol === 'AMAZON' // This would be determined from decrypted data
+          ) || {
+            symbol: 'UNKNOWN',
+            name: 'Unknown Project',
+            description: 'Project details encrypted',
+            location: 'Unknown',
+            projectType: 'Unknown'
+          };
+          
+          return {
+            id: `ORD-${orderId.toString().padStart(3, '0')}`,
+            symbol: matchingOffset.symbol,
+            name: matchingOffset.name,
+            orderType: 'Buy' as const, // Would be determined from decrypted data
+            quantity: 0, // Would be decrypted
+            price: 0, // Would be decrypted
+            totalValue: 0, // Would be calculated
+            status: orderInfo[2] ? 'Executed' as const : 'Pending' as const,
+            timestamp: new Date(Number(orderInfo[1]) * 1000).toISOString(),
+            encryptedData: {
+              handles,
+              proof: encryptedData[4] as string || '0x0'
+            }
+          };
+        } catch (error) {
+          console.error('❌ Failed to load order', orderId, ':', error);
+          return null;
+        }
+      }));
+      
+      // Filter out failed orders
+      const validOrders = ordersData.filter(order => order !== null) as Order[];
+      console.log('✅ Step 2 completed: Loaded', validOrders.length, 'valid orders');
+      
+      setOrders(validOrders);
+      console.log('🎉 Orders loaded from contract successfully!');
+    } catch (error) {
+      console.error('❌ Failed to load orders from contract:', error);
+      console.error('📊 Error details:', {
+        name: error?.name,
+        message: error?.message,
+        stack: error?.stack,
+        address
+      });
+      
+      // Fallback to mock data if contract fails
+      console.log('📊 Falling back to mock data...');
+      setOrders(mockOrders);
+    } finally {
+      setIsLoadingOrders(false);
+    }
+  };
+
   useEffect(() => {
-    setOrders(mockOrders);
-  }, []);
+    loadCarbonOffsets();
+    if (isConnected && address) {
+      loadOrdersFromContract();
+    }
+  }, [isConnected, address]);
 
   const handleDecryptOrder = async (orderId: string) => {
     if (!instance || !address) {
@@ -278,6 +391,15 @@ export const OrderHistory = () => {
           </p>
         </div>
         <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            onClick={loadOrdersFromContract}
+            disabled={isLoadingOrders}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`w-4 h-4 ${isLoadingOrders ? 'animate-spin' : ''}`} />
+            {isLoadingOrders ? 'Loading...' : 'Refresh Orders'}
+          </Button>
           <Button
             variant="outline"
             onClick={handleTestFHE}

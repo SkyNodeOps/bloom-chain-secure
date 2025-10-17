@@ -148,11 +148,43 @@ export const CONTRACT_ABI = [
     ],
     "stateMutability": "view",
     "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "address", "name": "_user", "type": "address"}],
+    "name": "getUserCarbonOrderIds",
+    "outputs": [{"internalType": "uint256[]", "name": "", "type": "uint256[]"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "uint256", "name": "_orderId", "type": "uint256"}],
+    "name": "getCarbonOrderEncryptedData",
+    "outputs": [
+      {"internalType": "bytes32", "name": "", "type": "bytes32"},
+      {"internalType": "bytes32", "name": "", "type": "bytes32"},
+      {"internalType": "bytes32", "name": "", "type": "bytes32"},
+      {"internalType": "bytes32", "name": "", "type": "bytes32"},
+      {"internalType": "bytes32", "name": "", "type": "bytes32"},
+      {"internalType": "uint256", "name": "", "type": "uint256"}
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "uint256", "name": "_orderId", "type": "uint256"}],
+    "name": "getCarbonOrderInfo",
+    "outputs": [
+      {"internalType": "address", "name": "", "type": "address"},
+      {"internalType": "uint256", "name": "", "type": "uint256"},
+      {"internalType": "bool", "name": "", "type": "bool"}
+    ],
+    "stateMutability": "view",
+    "type": "function"
   }
 ] as const;
 
 // Contract address (will be updated after deployment)
-export const CONTRACT_ADDRESS = "0x2537B6e0e739A5d3Be29f5ccfE76784DF0DBd310"; // Placeholder
+export const CONTRACT_ADDRESS = "0x1FCDBE4160E1698dac93934e1a4d5F1291656b0D"; // Updated by deploy script
 
 // Hook for contract interactions
 export function useContract() {
@@ -437,6 +469,51 @@ export function useContract() {
     ];
   };
 
+  const getUserCarbonOrderIds = async (userAddress: string) => {
+    try {
+      const result = await readContract({
+        address: CONTRACT_ADDRESS as `0x${string}`,
+        abi: CONTRACT_ABI,
+        functionName: 'getUserCarbonOrderIds',
+        args: [userAddress as `0x${string}`]
+      });
+      return result as bigint[];
+    } catch (error) {
+      console.error('Failed to get user carbon order IDs:', error);
+      throw error;
+    }
+  };
+
+  const getCarbonOrderEncryptedData = async (orderId: number) => {
+    try {
+      const result = await readContract({
+        address: CONTRACT_ADDRESS as `0x${string}`,
+        abi: CONTRACT_ABI,
+        functionName: 'getCarbonOrderEncryptedData',
+        args: [BigInt(orderId)]
+      });
+      return result;
+    } catch (error) {
+      console.error('Failed to get carbon order encrypted data:', error);
+      throw error;
+    }
+  };
+
+  const getCarbonOrderInfo = async (orderId: number) => {
+    try {
+      const result = await readContract({
+        address: CONTRACT_ADDRESS as `0x${string}`,
+        abi: CONTRACT_ABI,
+        functionName: 'getCarbonOrderInfo',
+        args: [BigInt(orderId)]
+      });
+      return result;
+    } catch (error) {
+      console.error('Failed to get carbon order info:', error);
+      throw error;
+    }
+  };
+
   return {
     createVault,
     depositToVault,
@@ -445,5 +522,8 @@ export function useContract() {
     reportSecurityAlert,
     placeCarbonOrder,
     getCarbonOffsets,
+    getUserCarbonOrderIds,
+    getCarbonOrderEncryptedData,
+    getCarbonOrderInfo,
   };
 }

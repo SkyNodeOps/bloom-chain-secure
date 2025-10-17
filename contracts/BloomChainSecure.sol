@@ -549,6 +549,60 @@ contract BloomChainSecure is SepoliaConfig, Ownable {
         
         carbonOffsets[_symbol].currentPrice = _newPrice;
     }
+    
+    /**
+     * @dev Get user's carbon order IDs
+     */
+    function getUserCarbonOrderIds(address _user) external view returns (uint256[] memory) {
+        uint256[] memory userOrders = new uint256[](orderCounter);
+        uint256 count = 0;
+        
+        for (uint256 i = 1; i <= orderCounter; i++) {
+            if (carbonOrders[i].trader == _user) {
+                userOrders[count] = i;
+                count++;
+            }
+        }
+        
+        // Resize array to actual count
+        uint256[] memory result = new uint256[](count);
+        for (uint256 i = 0; i < count; i++) {
+            result[i] = userOrders[i];
+        }
+        
+        return result;
+    }
+    
+    /**
+     * @dev Get carbon order encrypted data by ID
+     */
+    function getCarbonOrderEncryptedData(uint256 _orderId) external view returns (euint32, euint32, euint32, euint32, ebool, uint256) {
+        require(_orderId <= orderCounter, "Order does not exist");
+        CarbonOrder storage order = carbonOrders[_orderId];
+        
+        return (
+            order.orderId,
+            order.orderType,
+            order.quantity,
+            order.price,
+            order.isExecuted,
+            order.timestamp
+        );
+    }
+    
+    /**
+     * @dev Get carbon order basic info (non-encrypted)
+     */
+    function getCarbonOrderInfo(uint256 _orderId) external view returns (address, uint256, bool) {
+        require(_orderId <= orderCounter, "Order does not exist");
+        CarbonOrder storage order = carbonOrders[_orderId];
+        
+        return (
+            order.trader,
+            order.timestamp,
+            FHE.decrypt(order.isExecuted)
+        );
+    }
 
     // Emergency functions
     function emergencyPause() external onlyOwner {

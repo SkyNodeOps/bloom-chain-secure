@@ -198,7 +198,7 @@ export const OrderHistory = () => {
       const decryptedData = await decryptVaultData(
         instance,
         order.encryptedData.handles,
-        '0x20939C157bfC2F264595CeD2a58bE375bdB15616', // Contract address
+        '0x89814588d95856Db76151E3f13cC204bB9Fa5Ff5', // Contract address
         address,
         signer
       );
@@ -223,7 +223,6 @@ export const OrderHistory = () => {
       }));
 
       console.log('🎉 Order decryption completed successfully!');
-      // 解密数据将直接在页面上显示，无需弹窗
     } catch (error) {
       console.error('❌ FHE order decryption failed:', error);
       console.error('📊 Error details:', {

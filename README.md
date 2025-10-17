@@ -6,9 +6,18 @@ A revolutionary blockchain platform that leverages cutting-edge Fully Homomorphi
 
 ## 🎥 Demo Video
 
-https://github.com/SkyNodeOps/bloom-chain-secure/assets/123456789/carbon-trade-demo
+[![Carbon Trade Demo](https://img.shields.io/badge/🎥-Watch%20Demo-blue?style=for-the-badge)](https://github.com/SkyNodeOps/bloom-chain-secure/raw/main/public/carbon-trade-demo.mp4)
 
 *Watch the complete FHE-encrypted carbon offset trading workflow in action*
+
+> **📹 Demo Features**: 
+> - Complete FHE encryption workflow
+> - Carbon offset order creation
+> - Real-time market data display
+> - Order history decryption
+> - Privacy-preserving trading interface
+
+**Download Demo Video**: [carbon-trade-demo.mp4](https://github.com/SkyNodeOps/bloom-chain-secure/raw/main/public/carbon-trade-demo.mp4) (6.6MB)
 
 ## 🚀 Key Features
 

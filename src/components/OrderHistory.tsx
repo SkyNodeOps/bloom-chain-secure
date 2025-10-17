@@ -223,7 +223,7 @@ export const OrderHistory = () => {
       }));
 
       console.log('🎉 Order decryption completed successfully!');
-      alert(`Order ${orderId} decrypted successfully!\n\nDecrypted data:\n- Order Type: ${parsedData.orderType}\n- Quantity: ${parsedData.quantity}\n- Price: ${parsedData.price}\n- Symbol: ${parsedData.symbol}`);
+      // 解密数据将直接在页面上显示，无需弹窗
     } catch (error) {
       console.error('❌ FHE order decryption failed:', error);
       console.error('📊 Error details:', {
@@ -450,28 +450,28 @@ export const OrderHistory = () => {
               </div>
             </div>
 
-            {showDecrypted && decryptedOrders[order.id] && (
-              <div className="mt-4 p-4 bg-muted rounded-md">
-                <h4 className="font-medium mb-2 flex items-center gap-2">
+            {decryptedOrders[order.id] && (
+              <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-md">
+                <h4 className="font-medium mb-2 flex items-center gap-2 text-green-800">
                   <Unlock className="w-4 h-4 text-green-500" />
                   Decrypted Data
                 </h4>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-muted-foreground">Order Type:</span>
-                    <span className="ml-2 font-mono">{decryptedOrders[order.id].orderType}</span>
+                    <span className="ml-2 font-mono text-green-700">{decryptedOrders[order.id].orderType}</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Quantity:</span>
-                    <span className="ml-2 font-mono">{decryptedOrders[order.id].quantity}</span>
+                    <span className="ml-2 font-mono text-green-700">{decryptedOrders[order.id].quantity} tons</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Price:</span>
-                    <span className="ml-2 font-mono">{decryptedOrders[order.id].price}</span>
+                    <span className="ml-2 font-mono text-green-700">${decryptedOrders[order.id].price}</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Symbol:</span>
-                    <span className="ml-2 font-mono">{decryptedOrders[order.id].symbol}</span>
+                    <span className="ml-2 font-mono text-green-700">{decryptedOrders[order.id].symbol}</span>
                   </div>
                 </div>
               </div>
@@ -484,25 +484,41 @@ export const OrderHistory = () => {
                 <Lock className="w-4 h-4" />
                 <span>🔒 All order data encrypted with FHE</span>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleDecryptOrder(order.id)}
-                disabled={isDecrypting}
-                className="flex items-center gap-2"
-              >
-                {isDecrypting ? (
-                  <>
-                    <Lock className="w-4 h-4 animate-spin" />
-                    Decrypting...
-                  </>
-                ) : (
-                  <>
-                    <Unlock className="w-4 h-4" />
-                    Decrypt Order
-                  </>
-                )}
-              </Button>
+              {decryptedOrders[order.id] ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDecryptedOrders(prev => {
+                    const newDecrypted = { ...prev };
+                    delete newDecrypted[order.id];
+                    return newDecrypted;
+                  })}
+                  className="flex items-center gap-2"
+                >
+                  <Lock className="w-4 h-4" />
+                  Hide Decrypted
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDecryptOrder(order.id)}
+                  disabled={isDecrypting}
+                  className="flex items-center gap-2"
+                >
+                  {isDecrypting ? (
+                    <>
+                      <Lock className="w-4 h-4 animate-spin" />
+                      Decrypting...
+                    </>
+                  ) : (
+                    <>
+                      <Unlock className="w-4 h-4" />
+                      Decrypt Order
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           </Card>
         ))}

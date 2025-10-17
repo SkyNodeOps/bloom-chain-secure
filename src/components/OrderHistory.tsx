@@ -47,70 +47,9 @@ export const OrderHistory = () => {
   const [isDecrypting, setIsDecrypting] = useState(false);
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
   const [decryptedOrders, setDecryptedOrders] = useState<Record<string, any>>({});
+  const [contractError, setContractError] = useState<string | null>(null);
 
-  // Mock order data with encrypted handles
-  const mockOrders: Order[] = [
-    {
-      id: 'ORD-001',
-      symbol: 'AMAZON',
-      name: 'Amazon Reforestation',
-      orderType: 'Buy',
-      quantity: 50,
-      price: 12.50,
-      totalValue: 625.00,
-      status: 'Executed',
-      timestamp: '2024-01-15 14:30:25',
-      encryptedData: {
-        handles: [
-          '0x1a2b3c4d5e6f7890abcdef1234567890abcdef1234567890abcdef1234567890',
-          '0x2b3c4d5e6f7890abcdef1234567890abcdef1234567890abcdef1234567890ab',
-          '0x3c4d5e6f7890abcdef1234567890abcdef1234567890abcdef1234567890abcd',
-          '0x4d5e6f7890abcdef1234567890abcdef1234567890abcdef1234567890abcdef'
-        ],
-        proof: '0x5e6f7890abcdef1234567890abcdef1234567890abcdef1234567890abcdef12'
-      }
-    },
-    {
-      id: 'ORD-002',
-      symbol: 'SOLAR',
-      name: 'Solar Farm India',
-      orderType: 'Buy',
-      quantity: 100,
-      price: 8.75,
-      totalValue: 875.00,
-      status: 'Pending',
-      timestamp: '2024-01-15 15:45:12',
-      encryptedData: {
-        handles: [
-          '0x6f7890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234',
-          '0x7890abcdef1234567890abcdef1234567890abcdef1234567890abcdef123456',
-          '0x890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567',
-          '0x90abcdef1234567890abcdef1234567890abcdef1234567890abcdef12345678'
-        ],
-        proof: '0xa0bcdef1234567890abcdef1234567890abcdef1234567890abcdef123456789'
-      }
-    },
-    {
-      id: 'ORD-003',
-      symbol: 'WIND',
-      name: 'Wind Energy Brazil',
-      orderType: 'Sell',
-      quantity: 25,
-      price: 15.20,
-      totalValue: 380.00,
-      status: 'Executed',
-      timestamp: '2024-01-15 16:20:45',
-      encryptedData: {
-        handles: [
-          '0xb0cdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890',
-          '0xc0def1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab',
-          '0xd0ef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abc',
-          '0xe0f1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd'
-        ],
-        proof: '0xf01234567890abcdef1234567890abcdef1234567890abcdef1234567890abcde'
-      }
-    }
-  ];
+  // Note: No mock data - all orders are loaded from the smart contract
 
   // Load carbon offsets from contract
   const loadCarbonOffsets = async () => {
@@ -129,6 +68,7 @@ export const OrderHistory = () => {
     if (!address) return;
     
     setIsLoadingOrders(true);
+    setContractError(null);
     try {
       console.log('🔄 Loading orders from contract for address:', address);
       
@@ -140,6 +80,7 @@ export const OrderHistory = () => {
       if (orderIds.length === 0) {
         console.log('📊 No orders found for user');
         setOrders([]);
+        setContractError('No orders found for this address');
         return;
       }
       
@@ -209,9 +150,10 @@ export const OrderHistory = () => {
         address
       });
       
-      // Fallback to mock data if contract fails
-      console.log('📊 Falling back to mock data...');
-      setOrders(mockOrders);
+      // Set error state instead of falling back to mock data
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load orders from contract';
+      setContractError(errorMessage);
+      setOrders([]);
     } finally {
       setIsLoadingOrders(false);
     }
@@ -418,6 +360,46 @@ export const OrderHistory = () => {
           </Button>
         </div>
       </div>
+
+      {/* Error State */}
+      {contractError && (
+        <Card className="p-6 border-red-200 bg-red-50">
+          <div className="flex items-center gap-3">
+            <XCircle className="w-5 h-5 text-red-500" />
+            <div>
+              <h3 className="font-semibold text-red-800">Contract Error</h3>
+              <p className="text-red-600">{contractError}</p>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Loading State */}
+      {isLoadingOrders && (
+        <Card className="p-6">
+          <div className="flex items-center gap-3">
+            <RefreshCw className="w-5 h-5 animate-spin" />
+            <div>
+              <h3 className="font-semibold">Loading Orders from Contract</h3>
+              <p className="text-muted-foreground">Fetching your carbon offset orders...</p>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Empty State */}
+      {!isLoadingOrders && !contractError && orders.length === 0 && (
+        <Card className="p-8 text-center">
+          <History className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2">No Orders Found</h3>
+          <p className="text-muted-foreground mb-4">
+            You haven't placed any carbon offset orders yet.
+          </p>
+          <Button onClick={() => window.location.href = '/trading'}>
+            Start Trading
+          </Button>
+        </Card>
+      )}
 
       {/* Orders List */}
       <div className="space-y-4">

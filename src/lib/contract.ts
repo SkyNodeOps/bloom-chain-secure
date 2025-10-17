@@ -1,4 +1,4 @@
-import { useWriteContract, useReadContract } from 'wagmi';
+import { useWriteContract } from 'wagmi';
 import { useZamaInstance } from '../hooks/useZamaInstance';
 import { useEthersSigner } from '../hooks/useEthersSigner';
 import { encryptVaultData, decryptVaultData } from './fhe-utils';
@@ -471,7 +471,11 @@ export function useContract() {
 
   const getUserCarbonOrderIds = async (userAddress: string) => {
     try {
-      const result = await readContract({
+      // Use a direct contract call instead of readContract hook
+      const { getPublicClient } = await import('wagmi');
+      const publicClient = getPublicClient();
+      
+      const result = await publicClient.readContract({
         address: CONTRACT_ADDRESS as `0x${string}`,
         abi: CONTRACT_ABI,
         functionName: 'getUserCarbonOrderIds',
@@ -486,7 +490,10 @@ export function useContract() {
 
   const getCarbonOrderEncryptedData = async (orderId: number) => {
     try {
-      const result = await readContract({
+      const { getPublicClient } = await import('wagmi');
+      const publicClient = getPublicClient();
+      
+      const result = await publicClient.readContract({
         address: CONTRACT_ADDRESS as `0x${string}`,
         abi: CONTRACT_ABI,
         functionName: 'getCarbonOrderEncryptedData',
@@ -501,7 +508,10 @@ export function useContract() {
 
   const getCarbonOrderInfo = async (orderId: number) => {
     try {
-      const result = await readContract({
+      const { getPublicClient } = await import('wagmi');
+      const publicClient = getPublicClient();
+      
+      const result = await publicClient.readContract({
         address: CONTRACT_ADDRESS as `0x${string}`,
         abi: CONTRACT_ABI,
         functionName: 'getCarbonOrderInfo',

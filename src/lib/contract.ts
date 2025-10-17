@@ -1,4 +1,4 @@
-import { useWriteContract } from 'wagmi';
+import { useWriteContract, usePublicClient } from 'wagmi';
 import { useZamaInstance } from '../hooks/useZamaInstance';
 import { useEthersSigner } from '../hooks/useEthersSigner';
 import { encryptVaultData, decryptVaultData } from './fhe-utils';
@@ -191,6 +191,7 @@ export function useContract() {
   const { instance } = useZamaInstance();
   const { address } = useEthersSigner();
   const { writeContractAsync } = useWriteContract();
+  const publicClient = usePublicClient();
 
   const createVault = async (
     name: string,
@@ -471,9 +472,9 @@ export function useContract() {
 
   const getUserCarbonOrderIds = async (userAddress: string) => {
     try {
-      // Use a direct contract call instead of readContract hook
-      const { getPublicClient } = await import('wagmi');
-      const publicClient = getPublicClient();
+      if (!publicClient) {
+        throw new Error('Public client not available');
+      }
       
       const result = await publicClient.readContract({
         address: CONTRACT_ADDRESS as `0x${string}`,
@@ -490,8 +491,9 @@ export function useContract() {
 
   const getCarbonOrderEncryptedData = async (orderId: number) => {
     try {
-      const { getPublicClient } = await import('wagmi');
-      const publicClient = getPublicClient();
+      if (!publicClient) {
+        throw new Error('Public client not available');
+      }
       
       const result = await publicClient.readContract({
         address: CONTRACT_ADDRESS as `0x${string}`,
@@ -508,8 +510,9 @@ export function useContract() {
 
   const getCarbonOrderInfo = async (orderId: number) => {
     try {
-      const { getPublicClient } = await import('wagmi');
-      const publicClient = getPublicClient();
+      if (!publicClient) {
+        throw new Error('Public client not available');
+      }
       
       const result = await publicClient.readContract({
         address: CONTRACT_ADDRESS as `0x${string}`,

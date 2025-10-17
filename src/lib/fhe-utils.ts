@@ -231,12 +231,13 @@ export async function decryptVaultData(
       durationDays
     );
     
-    const signature = await signer.signTypedData({
-      domain: eip712.domain,
-      types: { UserDecryptRequestVerification: eip712.types.UserDecryptRequestVerification },
-      primaryType: 'UserDecryptRequestVerification',
-      message: eip712.message
-    });
+    const signature = await signer.signTypedData(
+      eip712.domain,
+      {
+        UserDecryptRequestVerification: eip712.types.UserDecryptRequestVerification,
+      },
+      eip712.message,
+    );
     console.log('✅ Step 3 completed: EIP712 signature created');
     
     console.log('🔄 Step 4: Decrypting handles...');

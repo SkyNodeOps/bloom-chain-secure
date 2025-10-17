@@ -232,15 +232,19 @@ export const OrderHistory = () => {
       let errorMessage = 'Unknown error';
       if (error instanceof Error) {
         if (error.message.includes('Invalid public or private key')) {
-          errorMessage = 'FHE keypair issue. Please refresh the page to reinitialize encryption.';
+          errorMessage = 'FHE keypair issue. This data may have been encrypted with a different keypair. Please try the "Reinitialize FHE" button.';
+        } else if (error.message.includes('Data encrypted with different keypair')) {
+          errorMessage = 'This data was encrypted with a different keypair. Please try the "Reinitialize FHE" button.';
         } else if (error.message.includes('No encrypted data available')) {
           errorMessage = 'This order has no encrypted data to decrypt.';
+        } else if (error.message.includes('FHE SDK error')) {
+          errorMessage = 'FHE SDK internal error. Please try the "Reinitialize FHE" button.';
         } else {
           errorMessage = error.message;
         }
       }
       
-      alert(`Error decrypting order: ${errorMessage}`);
+      alert(`Error decrypting order: ${errorMessage}\n\n💡 Try clicking "Reinitialize FHE" button to fix keypair issues.`);
     } finally {
       setIsDecrypting(false);
     }
@@ -264,6 +268,11 @@ export const OrderHistory = () => {
       console.error('❌ FHE Test Error:', error);
       alert(`FHE Test Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  };
+
+  const handleReinitializeFHE = () => {
+    console.log('🔄 Reinitializing FHE instance...');
+    window.location.reload();
   };
 
   const getStatusIcon = (status: string) => {
@@ -360,14 +369,22 @@ export const OrderHistory = () => {
             <RefreshCw className={`w-4 h-4 ${isLoadingOrders ? 'animate-spin' : ''}`} />
             {isLoadingOrders ? 'Loading...' : 'Refresh Orders'}
           </Button>
-          <Button
-            variant="outline"
-            onClick={handleTestFHE}
-            className="flex items-center gap-2"
-          >
-            <Lock className="w-4 h-4" />
-            Test FHE
-          </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleTestFHE}
+                    className="flex items-center gap-2"
+                  >
+                    <Lock className="w-4 h-4" />
+                    Test FHE
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleReinitializeFHE}
+                    className="flex items-center gap-2"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Reinitialize FHE
+                  </Button>
           <Button
             variant="outline"
             onClick={() => setShowDecrypted(!showDecrypted)}

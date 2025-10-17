@@ -197,6 +197,11 @@ export async function decryptVaultData(
       throw new Error('FHE instance not properly initialized');
     }
     
+    // Validate encrypted data format
+    if (!encryptedData || encryptedData.length === 0) {
+      throw new Error('No encrypted data provided');
+    }
+    
     console.log('🔄 Step 1: Building handle-contract pairs...');
     const handleContractPairs = encryptedData.map((handle, index) => {
       const hex = convertHex(handle);
@@ -237,9 +242,13 @@ export async function decryptVaultData(
       userAddress
     });
     
-    // If it's a keypair error, suggest refreshing the page
+    // Provide specific error guidance
     if (error?.message?.includes('Invalid public or private key')) {
-      console.log('💡 Suggestion: Please refresh the page to reinitialize FHE with proper keypair');
+      console.log('💡 Suggestion: This data may have been encrypted with a different keypair. Try refreshing the page.');
+      throw new Error('Data encrypted with different keypair. Please refresh the page and try again.');
+    } else if (error?.message?.includes('Cannot read properties of undefined')) {
+      console.log('💡 Suggestion: FHE SDK internal error. Please refresh the page.');
+      throw new Error('FHE SDK error. Please refresh the page and try again.');
     }
     
     throw error;

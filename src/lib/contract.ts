@@ -83,6 +83,71 @@ export const CONTRACT_ABI = [
     "outputs": [{"internalType": "uint256[]", "name": "", "type": "uint256[]"}],
     "stateMutability": "view",
     "type": "function"
+  },
+  {
+    "inputs": [
+      {"internalType": "string", "name": "_symbol", "type": "string"},
+      {"internalType": "string", "name": "_name", "type": "string"},
+      {"internalType": "string", "name": "_description", "type": "string"},
+      {"internalType": "string", "name": "_location", "type": "string"},
+      {"internalType": "string", "name": "_projectType", "type": "string"},
+      {"internalType": "uint256", "name": "_price", "type": "uint256"},
+      {"internalType": "uint256", "name": "_totalSupply", "type": "uint256"}
+    ],
+    "name": "createCarbonOffset",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"internalType": "string", "name": "_symbol", "type": "string"},
+      {"internalType": "bytes32", "name": "_orderType", "type": "bytes32"},
+      {"internalType": "bytes32", "name": "_quantity", "type": "bytes32"},
+      {"internalType": "bytes32", "name": "_price", "type": "bytes32"},
+      {"internalType": "bytes", "name": "_inputProof", "type": "bytes"}
+    ],
+    "name": "placeCarbonOrder",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "string", "name": "_symbol", "type": "string"}],
+    "name": "getCarbonOffsetInfo",
+    "outputs": [
+      {"internalType": "string", "name": "", "type": "string"},
+      {"internalType": "string", "name": "", "type": "string"},
+      {"internalType": "string", "name": "", "type": "string"},
+      {"internalType": "string", "name": "", "type": "string"},
+      {"internalType": "string", "name": "", "type": "string"},
+      {"internalType": "uint256", "name": "", "type": "uint256"},
+      {"internalType": "uint256", "name": "", "type": "uint256"},
+      {"internalType": "uint256", "name": "", "type": "uint256"},
+      {"internalType": "bool", "name": "", "type": "bool"},
+      {"internalType": "bool", "name": "", "type": "bool"}
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getAllCarbonOffsetSymbols",
+    "outputs": [{"internalType": "string[]", "name": "", "type": "string[]"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "address", "name": "_trader", "type": "address"}],
+    "name": "getCarbonPortfolioValue",
+    "outputs": [
+      {"internalType": "bytes32", "name": "", "type": "bytes32"},
+      {"internalType": "bytes32", "name": "", "type": "bytes32"},
+      {"internalType": "bytes32", "name": "", "type": "bytes32"},
+      {"internalType": "bytes32", "name": "", "type": "bytes32"}
+    ],
+    "stateMutability": "view",
+    "type": "function"
   }
 ] as const;
 
@@ -275,11 +340,110 @@ export function useContract() {
     }
   };
 
+  const placeCarbonOrder = async (
+    symbol: string,
+    orderType: number,
+    quantity: number,
+    price: number
+  ) => {
+    if (!instance || !address) {
+      throw new Error('FHE instance or wallet not ready');
+    }
+
+    try {
+      const encryptedData = await encryptVaultData(
+        instance,
+        CONTRACT_ADDRESS,
+        address,
+        { 
+          riskScore: orderType,
+          amount: quantity,
+          securityScore: price
+        }
+      );
+
+      const tx = await writeContractAsync({
+        address: CONTRACT_ADDRESS as `0x${string}`,
+        abi: CONTRACT_ABI,
+        functionName: 'placeCarbonOrder',
+        args: [
+          symbol,
+          encryptedData.handles[0], // orderType
+          encryptedData.handles[1], // quantity
+          encryptedData.handles[2], // price
+          encryptedData.inputProof
+        ],
+      });
+
+      return tx;
+    } catch (error) {
+      console.error('Failed to place carbon order:', error);
+      throw error;
+    }
+  };
+
+  const getCarbonOffsets = async () => {
+    // This would call the contract to get all carbon offsets
+    // For now, return mock data
+    return [
+      {
+        symbol: "AMAZON",
+        name: "Amazon Reforestation",
+        description: "Large-scale reforestation project in the Amazon rainforest",
+        location: "Brazil",
+        projectType: "Reforestation",
+        currentPrice: 12.50,
+        totalSupply: 10000,
+        availableSupply: 8500,
+        isVerified: true,
+        isActive: true
+      },
+      {
+        symbol: "SOLAR",
+        name: "Solar Farm India",
+        description: "Renewable solar energy project in India",
+        location: "India",
+        projectType: "Solar",
+        currentPrice: 8.75,
+        totalSupply: 15000,
+        availableSupply: 12000,
+        isVerified: true,
+        isActive: true
+      },
+      {
+        symbol: "WIND",
+        name: "Wind Energy Brazil",
+        description: "Wind farm project in Brazil",
+        location: "Brazil",
+        projectType: "Wind",
+        currentPrice: 15.20,
+        totalSupply: 8000,
+        availableSupply: 6500,
+        isVerified: true,
+        isActive: true
+      },
+      {
+        symbol: "OCEAN",
+        name: "Ocean Kelp Farming",
+        description: "Ocean kelp farming for carbon sequestration",
+        location: "Pacific Ocean",
+        projectType: "Ocean",
+        currentPrice: 22.80,
+        totalSupply: 5000,
+        availableSupply: 4200,
+        isVerified: true,
+        isActive: true
+      }
+    ];
+  };
+
   return {
     createVault,
     depositToVault,
     withdrawFromVault,
     updateSecurityMetrics,
     reportSecurityAlert,
+    placeCarbonOrder,
+    getCarbonOffsets,
   };
 }

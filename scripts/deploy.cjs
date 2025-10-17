@@ -38,6 +38,67 @@ async function main() {
     console.log("⚠️  Contract verification failed:", error);
   }
 
+  // Initialize demo carbon offset data
+  console.log("🌱 Initializing demo carbon offset data...");
+  
+  const demoOffsets = [
+    {
+      symbol: "AMAZON",
+      name: "Amazon Reforestation",
+      description: "Large-scale reforestation project in the Amazon rainforest",
+      location: "Brazil",
+      projectType: "Reforestation",
+      price: 1250, // $12.50 per ton
+      supply: 10000 // 10,000 tons
+    },
+    {
+      symbol: "SOLAR",
+      name: "Solar Farm India",
+      description: "Renewable solar energy project in India",
+      location: "India",
+      projectType: "Solar",
+      price: 875, // $8.75 per ton
+      supply: 15000 // 15,000 tons
+    },
+    {
+      symbol: "WIND",
+      name: "Wind Energy Brazil",
+      description: "Wind farm project in Brazil",
+      location: "Brazil",
+      projectType: "Wind",
+      price: 1520, // $15.20 per ton
+      supply: 8000 // 8,000 tons
+    },
+    {
+      symbol: "OCEAN",
+      name: "Ocean Kelp Farming",
+      description: "Ocean kelp farming for carbon sequestration",
+      location: "Pacific Ocean",
+      projectType: "Ocean",
+      price: 2280, // $22.80 per ton
+      supply: 5000 // 5,000 tons
+    }
+  ];
+  
+  // Create demo carbon offsets
+  for (const offset of demoOffsets) {
+    try {
+      const tx = await bloomChainSecure.createCarbonOffset(
+        offset.symbol,
+        offset.name,
+        offset.description,
+        offset.location,
+        offset.projectType,
+        offset.price,
+        offset.supply
+      );
+      await tx.wait();
+      console.log(`✅ Created carbon offset: ${offset.symbol} - ${offset.name}`);
+    } catch (error) {
+      console.log(`⚠️  Failed to create carbon offset ${offset.symbol}:`, error.message);
+    }
+  }
+
   // Update contract address in frontend files
   console.log("📝 Updating contract address in frontend...");
   

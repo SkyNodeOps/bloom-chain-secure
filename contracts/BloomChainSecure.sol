@@ -27,7 +27,50 @@ contract BloomChainSecure is SepoliaConfig, Ownable {
     event VaultWithdrawn(uint256 indexed vaultId, address indexed user, uint32 amount);
     event SecurityAlert(uint256 indexed vaultId, string alertType, string message);
     event AnalyticsUpdated(uint256 indexed vaultId, uint32 totalValue, uint32 riskScore);
+    
+    // Carbon trading events
+    event CarbonOffsetCreated(string indexed symbol, string name, uint256 price, uint256 supply);
+    event CarbonOrderPlaced(uint256 indexed orderId, address indexed trader, string symbol, uint256 quantity, uint256 price);
+    event CarbonOrderExecuted(uint256 indexed orderId, address indexed trader, string symbol, uint256 quantity, uint256 price);
+    event CarbonPortfolioUpdated(address indexed trader, uint256 totalOffsets, uint256 portfolioValue);
 
+    // Carbon Offset structure
+    struct CarbonOffset {
+        string symbol;
+        string name;
+        string description;
+        string location;
+        string projectType; // "Reforestation", "Solar", "Wind", "Ocean"
+        uint256 currentPrice; // Price per ton CO2
+        uint256 totalSupply; // Total available tons
+        uint256 availableSupply; // Remaining tons
+        bool isVerified;
+        bool isActive;
+        uint256 createdAt;
+    }
+    
+    // Encrypted trading order structure
+    struct CarbonOrder {
+        address trader;
+        euint32 orderId;
+        euint32 orderType; // 1: Buy, 2: Sell
+        euint32 quantity; // Tons of CO2
+        euint32 price; // Price per ton * 100
+        euint32 offsetSymbol; // Offset symbol numeric representation
+        ebool isExecuted;
+        uint256 timestamp;
+    }
+    
+    // Encrypted portfolio structure
+    struct CarbonPortfolio {
+        address owner;
+        euint64 totalOffsets; // Total tons of CO2 offsets
+        euint64 portfolioValue; // Total portfolio value
+        euint64 totalPnl; // Total profit/loss
+        euint32 tradeCount; // Number of trades
+        mapping(string => uint256) holdings; // Plaintext holdings by symbol
+    }
+    
     // Structs for encrypted data
     struct SecureVault {
         euint32 vaultId;
@@ -68,6 +111,13 @@ contract BloomChainSecure is SepoliaConfig, Ownable {
     mapping(uint256 => SecurityMetrics) public securityMetrics;
     mapping(address => euint32) public userReputation;
     mapping(address => uint256[]) public userVaults;
+    
+    // Carbon trading state variables
+    mapping(string => CarbonOffset) public carbonOffsets;
+    mapping(uint256 => CarbonOrder) public carbonOrders;
+    mapping(address => CarbonPortfolio) public carbonPortfolios;
+    string[] public offsetSymbols;
+    uint256 public orderCounter;
     
     uint256 public vaultCounter;
     uint256 public transactionCounter;
@@ -333,6 +383,171 @@ contract BloomChainSecure is SepoliaConfig, Ownable {
 
     function updateSecurityOracle(address _newOracle) external onlyOwner {
         securityOracle = _newOracle;
+    }
+
+    // Carbon Trading Functions
+    
+    /**
+     * @dev Create a new carbon offset project
+     */
+    function createCarbonOffset(
+        string memory _symbol,
+        string memory _name,
+        string memory _description,
+        string memory _location,
+        string memory _projectType,
+        uint256 _price,
+        uint256 _totalSupply
+    ) external onlyOwner {
+        require(bytes(_symbol).length > 0, "Symbol cannot be empty");
+        require(_price > 0, "Price must be positive");
+        require(_totalSupply > 0, "Supply must be positive");
+        require(!carbonOffsets[_symbol].isActive, "Offset already exists");
+        
+        carbonOffsets[_symbol] = CarbonOffset({
+            symbol: _symbol,
+            name: _name,
+            description: _description,
+            location: _location,
+            projectType: _projectType,
+            currentPrice: _price,
+            totalSupply: _totalSupply,
+            availableSupply: _totalSupply,
+            isVerified: true,
+            isActive: true,
+            createdAt: block.timestamp
+        });
+        
+        offsetSymbols.push(_symbol);
+        emit CarbonOffsetCreated(_symbol, _name, _price, _totalSupply);
+    }
+    
+    /**
+     * @dev Place a carbon offset order with encrypted data
+     */
+    function placeCarbonOrder(
+        string memory _symbol,
+        externalEuint32 _orderType,
+        externalEuint32 _quantity,
+        externalEuint32 _price,
+        bytes calldata _inputProof
+    ) external {
+        require(carbonOffsets[_symbol].isActive, "Carbon offset not active");
+        require(carbonOffsets[_symbol].availableSupply > 0, "No supply available");
+        
+        // Convert external encrypted data to internal
+        euint32 internalOrderType = FHE.fromExternal(_orderType, _inputProof);
+        euint32 internalQuantity = FHE.fromExternal(_quantity, _inputProof);
+        euint32 internalPrice = FHE.fromExternal(_price, _inputProof);
+        
+        orderCounter++;
+        
+        carbonOrders[orderCounter] = CarbonOrder({
+            trader: msg.sender,
+            orderId: FHE.asEuint32(uint32(orderCounter)),
+            orderType: internalOrderType,
+            quantity: internalQuantity,
+            price: internalPrice,
+            offsetSymbol: FHE.asEuint32(0), // Will be set from symbol
+            isExecuted: FHE.asEbool(false),
+            timestamp: block.timestamp
+        });
+        
+        emit CarbonOrderPlaced(orderCounter, msg.sender, _symbol, 0, 0); // Encrypted data
+    }
+    
+    /**
+     * @dev Execute a carbon offset order
+     */
+    function executeCarbonOrder(
+        uint256 _orderId,
+        externalEuint32 _quantity,
+        externalEuint32 _price,
+        bytes calldata _inputProof
+    ) external onlyAuthorizedOperator {
+        require(_orderId <= orderCounter, "Order does not exist");
+        // require(!FHE.decrypt(carbonOrders[_orderId].isExecuted), "Order already executed");
+        
+        // Convert external encrypted data to internal
+        euint32 internalQuantity = FHE.fromExternal(_quantity, _inputProof);
+        euint32 internalPrice = FHE.fromExternal(_price, _inputProof);
+        
+        // Mark order as executed
+        carbonOrders[_orderId].isExecuted = FHE.asEbool(true);
+        
+        // Update portfolio (encrypted)
+        CarbonPortfolio storage portfolio = carbonPortfolios[carbonOrders[_orderId].trader];
+        portfolio.tradeCount = FHE.add(portfolio.tradeCount, FHE.asEuint32(1));
+        // portfolio.totalOffsets = FHE.add(portfolio.totalOffsets, FHE.asEuint64(uint64(FHE.decrypt(internalQuantity))));
+        
+        emit CarbonOrderExecuted(_orderId, carbonOrders[_orderId].trader, "", 0, 0); // Encrypted data
+    }
+    
+    /**
+     * @dev Get carbon offset information
+     */
+    function getCarbonOffsetInfo(string memory _symbol) external view returns (
+        string memory,
+        string memory,
+        string memory,
+        string memory,
+        string memory,
+        uint256,
+        uint256,
+        uint256,
+        bool,
+        bool
+    ) {
+        CarbonOffset storage offset = carbonOffsets[_symbol];
+        return (
+            offset.symbol,
+            offset.name,
+            offset.description,
+            offset.location,
+            offset.projectType,
+            offset.currentPrice,
+            offset.totalSupply,
+            offset.availableSupply,
+            offset.isVerified,
+            offset.isActive
+        );
+    }
+    
+    /**
+     * @dev Get all carbon offset symbols
+     */
+    function getAllCarbonOffsetSymbols() external view returns (string[] memory) {
+        return offsetSymbols;
+    }
+    
+    /**
+     * @dev Get carbon portfolio value (returns encrypted data)
+     */
+    function getCarbonPortfolioValue(address _trader) external view returns (euint64, euint64, euint64, euint32) {
+        CarbonPortfolio storage portfolio = carbonPortfolios[_trader];
+        return (
+            portfolio.totalOffsets,
+            portfolio.portfolioValue,
+            portfolio.totalPnl,
+            portfolio.tradeCount
+        );
+    }
+    
+    /**
+     * @dev Get carbon holding (plaintext)
+     */
+    function getCarbonHolding(address _trader, string memory _symbol) external view returns (uint256) {
+        return carbonPortfolios[_trader].holdings[_symbol];
+    }
+    
+    /**
+     * @dev Update carbon offset price
+     */
+    function updateCarbonOffsetPrice(string memory _symbol, uint256 _newPrice) external onlyOwner {
+        require(carbonOffsets[_symbol].isActive, "Carbon offset not active");
+        require(_newPrice > 0, "Price must be positive");
+        
+        carbonOffsets[_symbol].currentPrice = _newPrice;
     }
 
     // Emergency functions

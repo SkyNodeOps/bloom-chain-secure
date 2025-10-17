@@ -203,7 +203,7 @@ export const TradingDashboard = () => {
       console.log('🔄 Step 1: Encrypting order data with FHE...');
       const encryptedData = await encryptCarbonOrder(
         instance,
-        '0x20939C157bfC2F264595CeD2a58bE375bdB15616', // Contract address
+        CONTRACT_ADDRESS, // Use centralized contract address
         address!,
         orderData
       );
@@ -213,7 +213,7 @@ export const TradingDashboard = () => {
 
       // Call the actual contract function
       console.log('🔄 Step 2: Calling smart contract...');
-      console.log('📊 Contract address:', '0x1FCDBE4160E1698dac93934e1a4d5F1291656b0D');
+      console.log('📊 Contract address:', CONTRACT_ADDRESS);
       console.log('📊 Function: placeCarbonOrder');
       console.log('📊 Args:', {
         symbol: selectedOffset,
@@ -224,7 +224,7 @@ export const TradingDashboard = () => {
       });
 
       const tx = await writeContractAsync({
-        address: '0x20939C157bfC2F264595CeD2a58bE375bdB15616' as `0x${string}`,
+        address: CONTRACT_ADDRESS as `0x${string}`,
         abi: [
           {
             "inputs": [

@@ -1,7 +1,7 @@
 import { useWriteContract, usePublicClient, useAccount } from 'wagmi';
 import { useZamaInstance } from '../hooks/useZamaInstance';
 import { useEthersSigner } from '../hooks/useEthersSigner';
-import { encryptVaultData, decryptVaultData } from './fhe-utils';
+import { encryptVaultData, decryptVaultData, encryptCarbonOrder } from './fhe-utils';
 
 // Contract ABI for BloomChainSecure
 export const CONTRACT_ABI = [
@@ -384,14 +384,16 @@ export function useContract() {
     }
 
     try {
-      const encryptedData = await encryptVaultData(
+      // Use encryptCarbonOrder instead of encryptVaultData
+      const encryptedData = await encryptCarbonOrder(
         instance,
         CONTRACT_ADDRESS,
         address,
-        { 
-          riskScore: orderType,
-          amount: quantity,
-          securityScore: price
+        {
+          orderType: orderType,
+          quantity: quantity,
+          price: price,
+          offsetSymbol: symbol
         }
       );
 
@@ -404,7 +406,7 @@ export function useContract() {
           encryptedData.handles[0], // orderType
           encryptedData.handles[1], // quantity
           encryptedData.handles[2], // price
-          encryptedData.inputProof
+          encryptedData.proof
         ],
       });
 

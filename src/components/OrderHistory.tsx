@@ -18,8 +18,9 @@ import {
 } from 'lucide-react';
 import { useAccount } from 'wagmi';
 import { useZamaInstance } from '../hooks/useZamaInstance';
+import { useEthersSigner } from '../hooks/useEthersSigner';
 import { useContract } from '../lib/contract';
-import { decryptVaultData, testFHEFunctionality } from '../lib/fhe-utils';
+import { decryptVaultData } from '../lib/fhe-utils';
 
 interface Order {
   id: string;
@@ -40,6 +41,7 @@ interface Order {
 export const OrderHistory = () => {
   const { address, isConnected } = useAccount();
   const { instance, isLoading: fheLoading, error: fheError } = useZamaInstance();
+  const { signer } = useEthersSigner();
   const { getCarbonOffsets, getUserCarbonOrderIds, getCarbonOrderEncryptedData, getCarbonOrderInfo } = useContract();
   const [orders, setOrders] = useState<Order[]>([]);
   const [carbonOffsets, setCarbonOffsets] = useState<any[]>([]);
@@ -167,8 +169,8 @@ export const OrderHistory = () => {
   }, [isConnected, address]);
 
   const handleDecryptOrder = async (orderId: string) => {
-    if (!instance || !address) {
-      alert('FHE instance or wallet not ready');
+    if (!instance || !address || !signer) {
+      alert('FHE instance, wallet, or signer not ready');
       return;
     }
 
@@ -196,7 +198,8 @@ export const OrderHistory = () => {
         instance,
         order.encryptedData.handles,
         '0x20939C157bfC2F264595CeD2a58bE375bdB15616', // Contract address
-        address
+        address,
+        signer
       );
 
       console.log('✅ Step 2 completed: Order data decrypted');
@@ -250,30 +253,6 @@ export const OrderHistory = () => {
     }
   };
 
-  const handleTestFHE = async () => {
-    if (!instance) {
-      alert('FHE instance not ready');
-      return;
-    }
-
-    try {
-      console.log('🧪 Testing FHE functionality...');
-      const success = await testFHEFunctionality(instance);
-      if (success) {
-        alert('✅ FHE Test Successful! Encryption/Decryption working properly.');
-      } else {
-        alert('❌ FHE Test Failed! Please check console for details.');
-      }
-    } catch (error) {
-      console.error('❌ FHE Test Error:', error);
-      alert(`FHE Test Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  };
-
-  const handleReinitializeFHE = () => {
-    console.log('🔄 Reinitializing FHE instance...');
-    window.location.reload();
-  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -359,41 +338,25 @@ export const OrderHistory = () => {
             View and decrypt your carbon offset trading orders with complete privacy
           </p>
         </div>
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            onClick={loadOrdersFromContract}
-            disabled={isLoadingOrders}
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className={`w-4 h-4 ${isLoadingOrders ? 'animate-spin' : ''}`} />
-            {isLoadingOrders ? 'Loading...' : 'Refresh Orders'}
-          </Button>
+                <div className="flex items-center gap-4">
                   <Button
                     variant="outline"
-                    onClick={handleTestFHE}
+                    onClick={loadOrdersFromContract}
+                    disabled={isLoadingOrders}
                     className="flex items-center gap-2"
                   >
-                    <Lock className="w-4 h-4" />
-                    Test FHE
+                    <RefreshCw className={`w-4 h-4 ${isLoadingOrders ? 'animate-spin' : ''}`} />
+                    {isLoadingOrders ? 'Loading...' : 'Refresh Orders'}
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={handleReinitializeFHE}
+                    onClick={() => setShowDecrypted(!showDecrypted)}
                     className="flex items-center gap-2"
                   >
-                    <RefreshCw className="w-4 h-4" />
-                    Reinitialize FHE
+                    {showDecrypted ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showDecrypted ? 'Hide Decrypted' : 'Show Decrypted'}
                   </Button>
-          <Button
-            variant="outline"
-            onClick={() => setShowDecrypted(!showDecrypted)}
-            className="flex items-center gap-2"
-          >
-            {showDecrypted ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            {showDecrypted ? 'Hide Decrypted' : 'Show Decrypted'}
-          </Button>
-        </div>
+                </div>
       </div>
 
       {/* Error State */}

@@ -182,7 +182,8 @@ export async function decryptVaultData(
   instance: any,
   encryptedData: any[],
   contractAddress: string,
-  userAddress: string
+  userAddress: string,
+  signer: any
 ) {
   try {
     console.log('🚀 Starting FHE vault data decryption process...');
@@ -202,7 +203,11 @@ export async function decryptVaultData(
       throw new Error('No encrypted data provided');
     }
     
-    console.log('🔄 Step 1: Building handle-contract pairs...');
+    console.log('🔄 Step 1: Generating keypair...');
+    const keypair = instance.generateKeypair();
+    console.log('✅ Step 1 completed: Keypair generated');
+    
+    console.log('🔄 Step 2: Building handle-contract pairs...');
     const handleContractPairs = encryptedData.map((handle, index) => {
       const hex = convertHex(handle);
       console.log(`📊 Handle ${index}: ${hex.substring(0, 10)}... (${hex.length} chars)`);
@@ -211,22 +216,51 @@ export async function decryptVaultData(
         contractAddress
       };
     });
-    console.log('✅ Step 1 completed: Handle-contract pairs built');
+    console.log('✅ Step 2 completed: Handle-contract pairs built');
     console.log('📊 Pairs count:', handleContractPairs.length);
     
-    console.log('🔄 Step 2: Decrypting handles...');
-    const result = await instance.userDecrypt(handleContractPairs, userAddress);
-    console.log('✅ Step 2 completed: Handles decrypted');
+    console.log('🔄 Step 3: Creating EIP712 signature...');
+    const startTimeStamp = Math.floor(Date.now() / 1000).toString();
+    const durationDays = '10';
+    const contractAddresses = [contractAddress];
+    
+    const eip712 = instance.createEIP712(
+      keypair.publicKey,
+      contractAddresses,
+      startTimeStamp,
+      durationDays
+    );
+    
+    const signature = await signer.signTypedData({
+      domain: eip712.domain,
+      types: { UserDecryptRequestVerification: eip712.types.UserDecryptRequestVerification },
+      primaryType: 'UserDecryptRequestVerification',
+      message: eip712.message
+    });
+    console.log('✅ Step 3 completed: EIP712 signature created');
+    
+    console.log('🔄 Step 4: Decrypting handles...');
+    const result = await instance.userDecrypt(
+      handleContractPairs,
+      keypair.privateKey,
+      keypair.publicKey,
+      signature.replace('0x', ''),
+      contractAddresses,
+      userAddress,
+      startTimeStamp,
+      durationDays
+    );
+    console.log('✅ Step 4 completed: Handles decrypted');
     console.log('📊 Decryption result keys:', Object.keys(result || {}));
     
-    console.log('🔄 Step 3: Parsing decrypted data...');
+    console.log('🔄 Step 5: Parsing decrypted data...');
     const decryptedData = {
       riskScore: result[handleContractPairs[0]?.handle]?.toString() || '0',
       amount: result[handleContractPairs[1]?.handle]?.toString() || '0',
       securityScore: result[handleContractPairs[2]?.handle]?.toString() || '0',
       severity: result[handleContractPairs[3]?.handle]?.toString() || '0'
     };
-    console.log('✅ Step 3 completed: Data parsed successfully');
+    console.log('✅ Step 5 completed: Data parsed successfully');
     console.log('📊 Decrypted data:', decryptedData);
     
     console.log('🎉 Vault data decryption completed successfully!');

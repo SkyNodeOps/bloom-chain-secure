@@ -1,4 +1,4 @@
-import { useWriteContract, usePublicClient } from 'wagmi';
+import { useWriteContract, usePublicClient, useAccount } from 'wagmi';
 import { useZamaInstance } from '../hooks/useZamaInstance';
 import { useEthersSigner } from '../hooks/useEthersSigner';
 import { encryptVaultData, decryptVaultData } from './fhe-utils';
@@ -189,7 +189,7 @@ export const CONTRACT_ADDRESS = "0x20939C157bfC2F264595CeD2a58bE375bdB15616"; //
 // Hook for contract interactions
 export function useContract() {
   const { instance } = useZamaInstance();
-  const { address } = useEthersSigner();
+  const { address } = useAccount();
   const { writeContractAsync } = useWriteContract();
   const publicClient = usePublicClient();
 

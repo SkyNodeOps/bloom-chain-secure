@@ -454,10 +454,12 @@ contract BloomChainSecure is SepoliaConfig, Ownable {
         });
         
         // Set ACL permissions for encrypted order data
+        FHE.allowThis(carbonOrders[orderCounter].orderId);
         FHE.allowThis(carbonOrders[orderCounter].orderType);
         FHE.allowThis(carbonOrders[orderCounter].quantity);
         FHE.allowThis(carbonOrders[orderCounter].price);
         FHE.allowThis(carbonOrders[orderCounter].offsetSymbol);
+        FHE.allow(carbonOrders[orderCounter].orderId, msg.sender);
         FHE.allow(carbonOrders[orderCounter].orderType, msg.sender);
         FHE.allow(carbonOrders[orderCounter].quantity, msg.sender);
         FHE.allow(carbonOrders[orderCounter].price, msg.sender);

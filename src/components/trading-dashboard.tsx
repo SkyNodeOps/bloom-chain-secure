@@ -1,18 +1,107 @@
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "react-router-dom";
-import { TrendingUp, TrendingDown, Leaf, Lock, ArrowLeft } from "lucide-react";
+import { TrendingUp, TrendingDown, Leaf, Lock, ArrowLeft, RefreshCw } from "lucide-react";
 import carbonLogo from "@/assets/carbon-logo.png";
+import { useAccount } from 'wagmi';
+import { useContract } from '../lib/contract';
+import { useZamaInstance } from '../hooks/useZamaInstance';
+import { encryptCarbonOrder } from '../lib/fhe-utils';
 
 export const TradingDashboard = () => {
-  const mockOffsets = [
-    { id: 1, project: "Amazon Reforestation", price: 12.50, change: +2.3, volume: "***", verified: true },
-    { id: 2, project: "Solar Farm India", price: 8.75, change: -1.2, volume: "***", verified: true },
-    { id: 3, project: "Wind Energy Brazil", price: 15.20, change: +5.1, volume: "***", verified: true },
-    { id: 4, project: "Ocean Kelp Farming", price: 22.80, change: +0.8, volume: "***", verified: true },
-  ];
+  const { address, isConnected } = useAccount();
+  const { instance } = useZamaInstance();
+  const { getCarbonOffsets, placeCarbonOrder } = useContract();
+  const [carbonOffsets, setCarbonOffsets] = useState<any[]>([]);
+  const [selectedOffset, setSelectedOffset] = useState<string>('');
+  const [amount, setAmount] = useState<string>('');
+  const [maxPrice, setMaxPrice] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+
+  // Load carbon offsets from contract
+  useEffect(() => {
+    const loadCarbonOffsets = async () => {
+      if (!isConnected) return;
+      
+      setIsLoading(true);
+      try {
+        console.log('🔄 Loading carbon offsets from contract...');
+        const offsets = await getCarbonOffsets();
+        setCarbonOffsets(offsets);
+        console.log('✅ Carbon offsets loaded:', offsets.length);
+      } catch (error) {
+        console.error('❌ Failed to load carbon offsets:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadCarbonOffsets();
+  }, [isConnected, getCarbonOffsets]);
+
+  // Auto-populate max price when offset is selected
+  useEffect(() => {
+    if (selectedOffset && carbonOffsets.length > 0) {
+      const offset = carbonOffsets.find(o => o.symbol === selectedOffset);
+      if (offset) {
+        setMaxPrice((offset.currentPrice / 100).toString());
+      }
+    }
+  }, [selectedOffset, carbonOffsets]);
+
+  const handlePlaceOrder = async () => {
+    if (!instance || !selectedOffset || !amount || !maxPrice) {
+      alert('Please fill in all fields');
+      return;
+    }
+
+    setIsPlacingOrder(true);
+    try {
+      console.log('🚀 Creating FHE encrypted order...');
+      
+      // Encrypt order data
+      const encryptedData = await encryptCarbonOrder(
+        instance,
+        '0x89814588d95856Db76151E3f13cC204bB9Fa5Ff5', // Contract address
+        address!,
+        {
+          orderType: 1, // Buy
+          quantity: parseInt(amount),
+          price: parseFloat(maxPrice) * 100, // Convert to cents
+          offsetSymbol: selectedOffset
+        }
+      );
+
+      console.log('📊 Encrypted data:', encryptedData);
+
+      // Place order on contract (encryption is handled inside the function)
+      const tx = await placeCarbonOrder(
+        selectedOffset,
+        1, // Order type: 1 = Buy
+        parseInt(amount), // Quantity
+        parseFloat(maxPrice) * 100 // Price in cents
+      );
+
+      console.log('✅ Order placed successfully!', tx);
+      alert('Order placed successfully! Check Order History to decrypt your order data.');
+      
+      // Reset form
+      setSelectedOffset('');
+      setAmount('');
+      setMaxPrice('');
+      
+    } catch (error) {
+      console.error('❌ Failed to place order:', error);
+      alert('Failed to place order: ' + error.message);
+    } finally {
+      setIsPlacingOrder(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -54,34 +143,38 @@ export const TradingDashboard = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {mockOffsets.map((offset) => (
-                    <div 
-                      key={offset.id} 
-                      className="flex items-center justify-between p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
-                    >
-                      <div>
-                        <h3 className="font-semibold text-foreground">{offset.project}</h3>
-                        <div className="flex items-center gap-2 mt-1">
-                          {offset.verified && <Badge variant="secondary" className="text-xs">Verified</Badge>}
-                          <span className="text-sm text-muted-foreground flex items-center gap-1">
-                            <Lock className="w-3 h-3" />
-                            Volume: {offset.volume}
-                          </span>
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <RefreshCw className="w-6 h-6 animate-spin text-primary" />
+                    <span className="ml-2">Loading carbon offsets...</span>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {carbonOffsets.map((offset) => (
+                      <div 
+                        key={offset.symbol} 
+                        className="flex items-center justify-between p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+                      >
+                        <div>
+                          <h3 className="font-semibold text-foreground">{offset.name}</h3>
+                          <div className="flex items-center gap-2 mt-1">
+                            {offset.isVerified && <Badge variant="secondary" className="text-xs">Verified</Badge>}
+                            <span className="text-sm text-muted-foreground flex items-center gap-1">
+                              <Lock className="w-3 h-3" />
+                              Volume: *** (Encrypted)
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg font-bold text-foreground">${(offset.currentPrice / 100).toFixed(2)}</div>
+                          <div className="text-sm text-muted-foreground">
+                            Supply: {offset.availableSupply} tons
+                          </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-lg font-bold text-foreground">${offset.price}</div>
-                        <div className={`flex items-center gap-1 text-sm ${
-                          offset.change > 0 ? 'text-primary' : 'text-destructive'
-                        }`}>
-                          {offset.change > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                          {Math.abs(offset.change)}%
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -94,15 +187,53 @@ export const TradingDashboard = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">Select Carbon Offset</label>
+                  <Select value={selectedOffset} onValueChange={setSelectedOffset}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a project" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {carbonOffsets.map((offset) => (
+                        <SelectItem key={offset.symbol} value={offset.symbol}>
+                          {offset.name} - ${(offset.currentPrice / 100).toFixed(2)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">Amount (tons CO₂)</label>
-                  <Input placeholder="0.00" type="number" />
+                  <Input 
+                    placeholder="0.00" 
+                    type="number" 
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                  />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">Max Price per Ton</label>
-                  <Input placeholder="0.00" type="number" />
+                  <Input 
+                    placeholder="0.00" 
+                    type="number" 
+                    value={maxPrice}
+                    onChange={(e) => setMaxPrice(e.target.value)}
+                  />
                 </div>
-                <Button className="w-full" variant="hero" size="lg">
-                  Place Order
+                <Button 
+                  className="w-full" 
+                  variant="hero" 
+                  size="lg"
+                  onClick={handlePlaceOrder}
+                  disabled={isPlacingOrder || !instance}
+                >
+                  {isPlacingOrder ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                      Placing Order...
+                    </>
+                  ) : (
+                    'Place Order'
+                  )}
                 </Button>
                 <p className="text-xs text-muted-foreground text-center">
                   🔒 All transaction details are encrypted

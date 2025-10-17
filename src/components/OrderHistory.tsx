@@ -74,6 +74,7 @@ export const OrderHistory = () => {
     setContractError(null);
     try {
       console.log('🔄 Loading orders from contract for address:', address);
+      console.log('📊 Contract address:', CONTRACT_ADDRESS);
       
       // Step 1: Get user's order IDs from contract
       console.log('📊 Step 1: Getting user order IDs...');
@@ -195,6 +196,7 @@ export const OrderHistory = () => {
       console.log('📊 Encrypted handles count:', order.encryptedData.handles.length);
       
       console.log('🔄 Step 2: Decrypting order data...');
+      console.log('📊 Contract address for decryption:', CONTRACT_ADDRESS);
       const signer = await signerPromise;
       const decryptedData = await decryptVaultData(
         instance,

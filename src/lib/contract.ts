@@ -184,7 +184,7 @@ export const CONTRACT_ABI = [
 ] as const;
 
 // Contract address (will be updated after deployment)
-export const CONTRACT_ADDRESS = "0x1FCDBE4160E1698dac93934e1a4d5F1291656b0D"; // Updated by deploy script
+export const CONTRACT_ADDRESS = "0x20939C157bfC2F264595CeD2a58bE375bdB15616"; // Updated by deploy script
 
 // Hook for contract interactions
 export function useContract() {

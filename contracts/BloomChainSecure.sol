@@ -554,20 +554,32 @@ contract BloomChainSecure is SepoliaConfig, Ownable {
      * @dev Get user's carbon order IDs
      */
     function getUserCarbonOrderIds(address _user) external view returns (uint256[] memory) {
-        uint256[] memory userOrders = new uint256[](orderCounter);
-        uint256 count = 0;
+        // If no orders exist, return empty array
+        if (orderCounter == 0) {
+            return new uint256[](0);
+        }
         
+        // First pass: count matching orders
+        uint256 count = 0;
         for (uint256 i = 1; i <= orderCounter; i++) {
             if (carbonOrders[i].trader == _user) {
-                userOrders[count] = i;
                 count++;
             }
         }
         
-        // Resize array to actual count
+        // If no matching orders, return empty array
+        if (count == 0) {
+            return new uint256[](0);
+        }
+        
+        // Second pass: collect matching order IDs
         uint256[] memory result = new uint256[](count);
-        for (uint256 i = 0; i < count; i++) {
-            result[i] = userOrders[i];
+        uint256 index = 0;
+        for (uint256 i = 1; i <= orderCounter; i++) {
+            if (carbonOrders[i].trader == _user) {
+                result[index] = i;
+                index++;
+            }
         }
         
         return result;
@@ -597,10 +609,12 @@ contract BloomChainSecure is SepoliaConfig, Ownable {
         require(_orderId <= orderCounter, "Order does not exist");
         CarbonOrder storage order = carbonOrders[_orderId];
         
+        // For now, return false as default since we can't decrypt on-chain
+        // In a real implementation, this would need to be handled off-chain
         return (
             order.trader,
             order.timestamp,
-            FHE.decrypt(order.isExecuted)
+            false // Default to false since we can't decrypt isExecuted on-chain
         );
     }
 

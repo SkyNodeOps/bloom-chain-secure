@@ -203,7 +203,7 @@ export const TradingDashboard = () => {
       console.log('🔄 Step 1: Encrypting order data with FHE...');
       const encryptedData = await encryptCarbonOrder(
         instance,
-        '0x1FCDBE4160E1698dac93934e1a4d5F1291656b0D', // Contract address
+        '0x20939C157bfC2F264595CeD2a58bE375bdB15616', // Contract address
         address!,
         orderData
       );
@@ -224,7 +224,7 @@ export const TradingDashboard = () => {
       });
 
       const tx = await writeContractAsync({
-        address: '0x1FCDBE4160E1698dac93934e1a4d5F1291656b0D' as `0x${string}`,
+        address: '0x20939C157bfC2F264595CeD2a58bE375bdB15616' as `0x${string}`,
         abi: [
           {
             "inputs": [

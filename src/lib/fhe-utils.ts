@@ -192,6 +192,11 @@ export async function decryptVaultData(
       userAddress
     });
     
+    // Check if FHE instance has proper keypair
+    if (!instance || typeof instance.userDecrypt !== 'function') {
+      throw new Error('FHE instance not properly initialized');
+    }
+    
     console.log('🔄 Step 1: Building handle-contract pairs...');
     const handleContractPairs = encryptedData.map((handle, index) => {
       const hex = convertHex(handle);
@@ -231,6 +236,12 @@ export async function decryptVaultData(
       contractAddress,
       userAddress
     });
+    
+    // If it's a keypair error, suggest refreshing the page
+    if (error?.message?.includes('Invalid public or private key')) {
+      console.log('💡 Suggestion: Please refresh the page to reinitialize FHE with proper keypair');
+    }
+    
     throw error;
   }
 }

@@ -182,6 +182,12 @@ export const OrderHistory = () => {
         throw new Error('Order or encrypted data not found');
       }
 
+      // Check if this is real contract data or mock data
+      if (order.encryptedData.handles.length === 0 || 
+          order.encryptedData.handles.every(handle => handle === '0x0' || handle === '0x0000000000000000000000000000000000000000000000000000000000000000')) {
+        throw new Error('No encrypted data available for this order. This may be mock data that cannot be decrypted.');
+      }
+
       console.log('🔄 Step 1: Preparing encrypted handles...');
       console.log('📊 Encrypted handles count:', order.encryptedData.handles.length);
       
@@ -222,7 +228,19 @@ export const OrderHistory = () => {
         stack: error?.stack,
         orderId
       });
-      alert(`Error decrypting order: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      let errorMessage = 'Unknown error';
+      if (error instanceof Error) {
+        if (error.message.includes('Invalid public or private key')) {
+          errorMessage = 'FHE keypair issue. Please refresh the page to reinitialize encryption.';
+        } else if (error.message.includes('No encrypted data available')) {
+          errorMessage = 'This order has no encrypted data to decrypt.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      alert(`Error decrypting order: ${errorMessage}`);
     } finally {
       setIsDecrypting(false);
     }

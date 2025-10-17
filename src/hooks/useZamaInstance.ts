@@ -40,6 +40,10 @@ export function useZamaInstance() {
         console.log('✅ Step 2 completed: FHE instance created successfully');
         console.log('📊 Instance methods:', Object.keys(zamaInstance || {}));
 
+        console.log('🔄 Step 3: Generating user keypair...');
+        await zamaInstance.generateKeypair();
+        console.log('✅ Step 3 completed: User keypair generated');
+
         if (mounted) {
           setInstance(zamaInstance);
           console.log('🎉 FHE initialization completed successfully!');

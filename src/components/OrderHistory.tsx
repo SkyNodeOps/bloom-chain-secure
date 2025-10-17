@@ -189,7 +189,7 @@ export const OrderHistory = () => {
       const decryptedData = await decryptVaultData(
         instance,
         order.encryptedData.handles,
-        '0x1FCDBE4160E1698dac93934e1a4d5F1291656b0D', // Contract address
+        '0x20939C157bfC2F264595CeD2a58bE375bdB15616', // Contract address
         address
       );
 

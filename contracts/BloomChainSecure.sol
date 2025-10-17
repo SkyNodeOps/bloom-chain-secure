@@ -98,7 +98,7 @@ contract BloomChainSecure is SepoliaConfig, Ownable {
         euint32 internalRiskScore = FHE.fromExternal(_initialRiskScore, _inputProof);
         
         vaults[vaultId] = SecureVault({
-            vaultId: FHE.asEuint32(vaultId),
+            vaultId: FHE.asEuint32(uint32(vaultId)),
             totalDeposits: FHE.asEuint32(0),
             totalWithdrawals: FHE.asEuint32(0),
             balance: FHE.asEuint32(0),
@@ -146,7 +146,7 @@ contract BloomChainSecure is SepoliaConfig, Ownable {
         
         // Create encrypted transaction record
         transactions[transactionId] = EncryptedTransaction({
-            transactionId: FHE.asEuint32(transactionId),
+            transactionId: FHE.asEuint32(uint32(transactionId)),
             amount: internalAmount,
             timestamp: FHE.asEuint32(uint32(block.timestamp)),
             isDeposit: FHE.asEbool(true),
@@ -185,7 +185,7 @@ contract BloomChainSecure is SepoliaConfig, Ownable {
         
         // Create encrypted transaction record
         transactions[transactionId] = EncryptedTransaction({
-            transactionId: FHE.asEuint32(transactionId),
+            transactionId: FHE.asEuint32(uint32(transactionId)),
             amount: internalAmount,
             timestamp: FHE.asEuint32(uint32(block.timestamp)),
             isDeposit: FHE.asEbool(false),
@@ -199,8 +199,9 @@ contract BloomChainSecure is SepoliaConfig, Ownable {
         vaults[_vaultId].transactionCount = FHE.add(vaults[_vaultId].transactionCount, FHE.asEuint32(1));
         vaults[_vaultId].lastActivity = block.timestamp;
 
-        // Transfer ETH to user
-        uint256 withdrawAmount = msg.value; // This would need to be decrypted off-chain
+        // Transfer ETH to user (amount would need to be decrypted off-chain)
+        // For now, we'll use a placeholder amount
+        uint256 withdrawAmount = 0; // This would need to be decrypted off-chain
         payable(msg.sender).transfer(withdrawAmount);
 
         emit VaultWithdrawn(_vaultId, msg.sender, 0); // Amount encrypted, emit 0
@@ -245,7 +246,7 @@ contract BloomChainSecure is SepoliaConfig, Ownable {
         require(vaults[_vaultId].owner != address(0), "Vault does not exist");
         
         // Convert external encrypted severity to internal
-        euint32 internalSeverity = FHE.fromExternal(_severity, _inputProof);
+        // euint32 internalSeverity = FHE.fromExternal(_severity, _inputProof);
         
         // Update security metrics
         securityMetrics[_vaultId].totalAlerts = FHE.add(securityMetrics[_vaultId].totalAlerts, FHE.asEuint32(1));

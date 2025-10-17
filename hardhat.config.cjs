@@ -1,17 +1,16 @@
-import { HardhatUserConfig } from "hardhat/config";
-import "@nomicfoundation/hardhat-toolbox";
-import "@nomicfoundation/hardhat-verify";
-import "@fhevm/hardhat-plugin";
-import "dotenv/config";
+const { HardhatUserConfig } = require("hardhat/config");
+require("@nomicfoundation/hardhat-toolbox");
+require("@nomicfoundation/hardhat-verify");
+require("@fhevm/hardhat-plugin");
+require("dotenv/config");
 
-const config: HardhatUserConfig = {
+const config = {
   solidity: {
     version: "0.8.24",
     settings: {
       optimizer: {
         enabled: true,
         runs: 200,
-        viaIR: true, // Enable viaIR to avoid "Stack too deep" errors
       },
     },
   },
@@ -33,4 +32,4 @@ const config: HardhatUserConfig = {
   },
 };
 
-export default config;
+module.exports = config;

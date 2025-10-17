@@ -6,11 +6,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Shield, Lock, AlertTriangle, TrendingUp, Wallet } from 'lucide-react';
-import { fheUtils } from '@/lib/fhe-utils';
 import { useAccount } from 'wagmi';
+import { useZamaInstance } from '../hooks/useZamaInstance';
+import { useContract } from '../lib/contract';
 
 export const EncryptedVaultManager = () => {
   const { address, isConnected } = useAccount();
+  const { instance, isLoading: fheLoading, error: fheError } = useZamaInstance();
+  const { createVault, depositToVault, withdrawFromVault, updateSecurityMetrics, reportSecurityAlert } = useContract();
   const [vaultName, setVaultName] = useState('');
   const [vaultDescription, setVaultDescription] = useState('');
   const [depositAmount, setDepositAmount] = useState('');
@@ -32,23 +35,23 @@ export const EncryptedVaultManager = () => {
       return;
     }
 
+    if (!instance) {
+      alert('FHE encryption service not ready');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const result = await fheUtils.createEncryptedVault(
-        '0x...', // Contract address
+      const tx = await createVault(
         vaultName,
         vaultDescription,
         50 // Initial risk score
       );
 
-      if (result.success) {
-        setLastTransaction(result.txHash || '');
-        alert(`Vault created successfully! Transaction: ${result.txHash}`);
-        setVaultName('');
-        setVaultDescription('');
-      } else {
-        alert('Failed to create vault');
-      }
+      setLastTransaction(tx);
+      alert(`Vault created successfully! Transaction: ${tx}`);
+      setVaultName('');
+      setVaultDescription('');
     } catch (error) {
       console.error('Error creating vault:', error);
       alert('Error creating vault');
@@ -63,21 +66,22 @@ export const EncryptedVaultManager = () => {
       return;
     }
 
+    if (!instance) {
+      alert('FHE encryption service not ready');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const result = await fheUtils.depositEncryptedFunds(
-        '0x...', // Contract address
+      const tx = await depositToVault(
         selectedVault,
-        parseFloat(depositAmount)
+        parseFloat(depositAmount),
+        depositAmount // ETH amount
       );
 
-      if (result.success) {
-        setLastTransaction(result.txHash || '');
-        alert(`Deposit successful! Transaction: ${result.txHash}`);
-        setDepositAmount('');
-      } else {
-        alert('Failed to deposit funds');
-      }
+      setLastTransaction(tx);
+      alert(`Deposit successful! Transaction: ${tx}`);
+      setDepositAmount('');
     } catch (error) {
       console.error('Error depositing:', error);
       alert('Error depositing funds');
@@ -92,21 +96,21 @@ export const EncryptedVaultManager = () => {
       return;
     }
 
+    if (!instance) {
+      alert('FHE encryption service not ready');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const result = await fheUtils.withdrawEncryptedFunds(
-        '0x...', // Contract address
+      const tx = await withdrawFromVault(
         selectedVault,
         parseFloat(withdrawAmount)
       );
 
-      if (result.success) {
-        setLastTransaction(result.txHash || '');
-        alert(`Withdrawal successful! Transaction: ${result.txHash}`);
-        setWithdrawAmount('');
-      } else {
-        alert('Failed to withdraw funds');
-      }
+      setLastTransaction(tx);
+      alert(`Withdrawal successful! Transaction: ${tx}`);
+      setWithdrawAmount('');
     } catch (error) {
       console.error('Error withdrawing:', error);
       alert('Error withdrawing funds');
@@ -121,22 +125,22 @@ export const EncryptedVaultManager = () => {
       return;
     }
 
+    if (!instance) {
+      alert('FHE encryption service not ready');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const result = await fheUtils.reportSecurityAlert(
-        '0x...', // Contract address
+      const tx = await reportSecurityAlert(
         selectedVault,
         'SUSPICIOUS_ACTIVITY',
         'Unusual transaction pattern detected',
         8 // High severity
       );
 
-      if (result.success) {
-        setLastTransaction(result.txHash || '');
-        alert(`Security alert reported! Transaction: ${result.txHash}`);
-      } else {
-        alert('Failed to report security alert');
-      }
+      setLastTransaction(tx);
+      alert(`Security alert reported! Transaction: ${tx}`);
     } catch (error) {
       console.error('Error reporting alert:', error);
       alert('Error reporting security alert');
@@ -155,6 +159,38 @@ export const EncryptedVaultManager = () => {
           </CardTitle>
           <CardDescription>
             Please connect your wallet to access encrypted vault management
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  if (fheLoading) {
+    return (
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="w-5 h-5" />
+            Initializing FHE Encryption
+          </CardTitle>
+          <CardDescription>
+            Setting up privacy-preserving encryption services...
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  if (fheError) {
+    return (
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-red-500">
+            <AlertTriangle className="w-5 h-5" />
+            FHE Initialization Failed
+          </CardTitle>
+          <CardDescription>
+            {fheError}
           </CardDescription>
         </CardHeader>
       </Card>
@@ -309,7 +345,17 @@ export const EncryptedVaultManager = () => {
             </Button>
             
             <Button 
-              onClick={() => fheUtils.updateSecurityMetrics('0x...', selectedVault || 1, 75, 85)}
+              onClick={async () => {
+                if (!selectedVault) return;
+                try {
+                  const tx = await updateSecurityMetrics(selectedVault, 75, 85);
+                  setLastTransaction(tx);
+                  alert(`Security metrics updated! Transaction: ${tx}`);
+                } catch (error) {
+                  console.error('Error updating security metrics:', error);
+                  alert('Error updating security metrics');
+                }
+              }}
               disabled={isLoading || !selectedVault}
               variant="outline"
             >
@@ -317,7 +363,7 @@ export const EncryptedVaultManager = () => {
             </Button>
             
             <Button 
-              onClick={() => fheUtils.generateSecurityScore('75', '10', '2')}
+              onClick={() => alert('Security score generation would be implemented here')}
               disabled={isLoading}
               variant="secondary"
             >

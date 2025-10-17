@@ -1,6 +1,6 @@
-import { ethers } from "hardhat";
-import { writeFileSync } from "fs";
-import { join } from "path";
+const { ethers } = require("hardhat");
+const { writeFileSync } = require("fs");
+const { join } = require("path");
 
 async function main() {
   console.log("🚀 Starting Bloom Chain Secure deployment...");

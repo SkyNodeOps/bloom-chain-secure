@@ -2,6 +2,7 @@ import { useWriteContract, usePublicClient, useAccount } from 'wagmi';
 import { useZamaInstance } from '../hooks/useZamaInstance';
 import { useEthersSigner } from '../hooks/useEthersSigner';
 import { encryptVaultData, decryptVaultData, encryptCarbonOrder } from './fhe-utils';
+import { CONTRACT_ADDRESS } from '../config/contracts';
 
 // Contract ABI for BloomChainSecure
 export const CONTRACT_ABI = [
@@ -183,8 +184,7 @@ export const CONTRACT_ABI = [
   }
 ] as const;
 
-// Contract address (will be updated after deployment)
-export const CONTRACT_ADDRESS = "0x89814588d95856Db76151E3f13cC204bB9Fa5Ff5"; // Updated by deploy script
+// Contract address is now imported from config/contracts.ts
 
 // Hook for contract interactions
 export function useContract() {

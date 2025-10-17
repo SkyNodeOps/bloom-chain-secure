@@ -21,6 +21,7 @@ import { useZamaInstance } from '../hooks/useZamaInstance';
 import { useEthersSigner } from '../hooks/useEthersSigner';
 import { useContract } from '../lib/contract';
 import { decryptVaultData } from '../lib/fhe-utils';
+import { CONTRACT_ADDRESS } from '../config/contracts';
 
 interface Order {
   id: string;
@@ -198,7 +199,7 @@ export const OrderHistory = () => {
       const decryptedData = await decryptVaultData(
         instance,
         order.encryptedData.handles,
-        '0x89814588d95856Db76151E3f13cC204bB9Fa5Ff5', // Contract address
+        CONTRACT_ADDRESS, // Use centralized contract address
         address,
         signer
       );

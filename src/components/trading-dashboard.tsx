@@ -11,6 +11,7 @@ import { useAccount } from 'wagmi';
 import { useContract } from '../lib/contract';
 import { useZamaInstance } from '../hooks/useZamaInstance';
 import { encryptCarbonOrder } from '../lib/fhe-utils';
+import { CONTRACT_ADDRESS } from '../config/contracts';
 
 export const TradingDashboard = () => {
   const { address, isConnected } = useAccount();
@@ -67,7 +68,7 @@ export const TradingDashboard = () => {
       // Encrypt order data
       const encryptedData = await encryptCarbonOrder(
         instance,
-        '0x89814588d95856Db76151E3f13cC204bB9Fa5Ff5', // Contract address
+        CONTRACT_ADDRESS, // Use centralized contract address
         address!,
         {
           orderType: 1, // Buy

@@ -1,7 +1,7 @@
 // 合约配置文件 - 统一管理所有合约地址
 export const CONTRACT_CONFIG = {
   // 主合约地址
-  BLOOM_CHAIN_SECURE: "0x89814588d95856Db76151E3f13cC204bB9Fa5Ff5",
+  BLOOM_CHAIN_SECURE: "0x62078Fe8c7199B432c88e4802eaB97F25d80da7d",
   
   // 网络配置
   NETWORK: {

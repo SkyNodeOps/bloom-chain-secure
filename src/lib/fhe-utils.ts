@@ -421,3 +421,116 @@ export async function testFHEFunctionality(instance: any) {
     return false;
   }
 }
+
+// FHE decryption helper for carbon offset orders
+export async function decryptCarbonOrder(
+  instance: any,
+  encryptedData: any[],
+  contractAddress: string,
+  userAddress: string,
+  signer: any
+) {
+  try {
+    console.log('🚀 Starting FHE carbon order decryption process...');
+    console.log('📊 Input parameters:', {
+      encryptedDataLength: encryptedData.length,
+      contractAddress,
+      userAddress
+    });
+    
+    // Check if FHE instance has proper keypair
+    if (!instance || typeof instance.userDecrypt !== 'function') {
+      throw new Error('FHE instance not properly initialized');
+    }
+    
+    // Validate encrypted data format
+    if (!encryptedData || encryptedData.length === 0) {
+      throw new Error('No encrypted data provided');
+    }
+    
+    console.log('🔄 Step 1: Generating keypair...');
+    const keypair = instance.generateKeypair();
+    console.log('✅ Step 1 completed: Keypair generated');
+    
+    console.log('🔄 Step 2: Building handle-contract pairs...');
+    const handleContractPairs = encryptedData.map((handle, index) => {
+      const hex = convertHex(handle);
+      console.log(`📊 Handle ${index}: ${hex.substring(0, 10)}... (${hex.length} chars)`);
+      return {
+        handle: hex,
+        contractAddress
+      };
+    });
+    console.log('✅ Step 2 completed: Handle-contract pairs built');
+    console.log('📊 Pairs count:', handleContractPairs.length);
+    
+    console.log('🔄 Step 3: Creating EIP712 signature...');
+    const startTimeStamp = Math.floor(Date.now() / 1000).toString();
+    const durationDays = '10';
+    const contractAddresses = [contractAddress];
+    
+    const eip712 = instance.createEIP712(
+      keypair.publicKey,
+      contractAddresses,
+      startTimeStamp,
+      durationDays
+    );
+    
+    const signature = await signer.signTypedData(
+      eip712.domain,
+      {
+        UserDecryptRequestVerification: eip712.types.UserDecryptRequestVerification,
+      },
+      eip712.message,
+    );
+    console.log('✅ Step 3 completed: EIP712 signature created');
+    
+    console.log('🔄 Step 4: Decrypting handles...');
+    const result = await instance.userDecrypt(
+      handleContractPairs,
+      keypair.privateKey,
+      keypair.publicKey,
+      signature.replace('0x', ''),
+      contractAddresses,
+      userAddress,
+      startTimeStamp,
+      durationDays
+    );
+    console.log('✅ Step 4 completed: Handles decrypted');
+    console.log('📊 Decryption result keys:', Object.keys(result || {}));
+    
+    console.log('🔄 Step 5: Parsing decrypted carbon order data...');
+    const decryptedData = {
+      orderType: result[handleContractPairs[0]?.handle]?.toString() || '1',
+      quantity: result[handleContractPairs[1]?.handle]?.toString() || '0',
+      price: result[handleContractPairs[2]?.handle]?.toString() || '0',
+      symbol: result[handleContractPairs[3]?.handle]?.toString() || '0'
+    };
+    console.log('✅ Step 5 completed: Carbon order data parsed successfully');
+    console.log('📊 Decrypted carbon order data:', decryptedData);
+    
+    console.log('🎉 Carbon order decryption completed successfully!');
+    return result;
+  } catch (error) {
+    console.error('❌ FHE carbon order decryption failed:', error);
+    console.error('📊 Error details:', {
+      name: error?.name,
+      message: error?.message,
+      stack: error?.stack,
+      encryptedDataLength: encryptedData.length,
+      contractAddress,
+      userAddress
+    });
+    
+    // Provide specific error guidance
+    if (error?.message?.includes('Invalid public or private key')) {
+      console.log('💡 Suggestion: This data may have been encrypted with a different keypair. Try refreshing the page.');
+      throw new Error('Data encrypted with different keypair. Please refresh the page and try again.');
+    } else if (error?.message?.includes('Cannot read properties of undefined')) {
+      console.log('💡 Suggestion: FHE SDK internal error. Please refresh the page.');
+      throw new Error('FHE SDK error. Please refresh the page and try again.');
+    }
+    
+    throw error;
+  }
+}

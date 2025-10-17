@@ -20,7 +20,7 @@ import { useAccount } from 'wagmi';
 import { useZamaInstance } from '../hooks/useZamaInstance';
 import { useEthersSigner } from '../hooks/useEthersSigner';
 import { useContract } from '../lib/contract';
-import { decryptVaultData, getCarbonOffsetSymbol } from '../lib/fhe-utils';
+import { decryptCarbonOrder, getCarbonOffsetSymbol } from '../lib/fhe-utils';
 import { CONTRACT_ADDRESS } from '../config/contracts';
 
 interface Order {
@@ -210,7 +210,7 @@ export const OrderHistory = () => {
       console.log('🔄 Step 2: Decrypting order data...');
       console.log('📊 Contract address for decryption:', CONTRACT_ADDRESS);
       const signer = await signerPromise;
-      const decryptedData = await decryptVaultData(
+      const decryptedData = await decryptCarbonOrder(
         instance,
         order.encryptedData.handles,
         CONTRACT_ADDRESS, // Use centralized contract address

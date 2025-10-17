@@ -22,6 +22,7 @@ import { useZamaInstance } from '../hooks/useZamaInstance';
 import { useContract } from '../lib/contract';
 import { encryptCarbonOrder, testFHEFunctionality } from '../lib/fhe-utils';
 import { useWriteContract } from 'wagmi';
+import { CONTRACT_ADDRESS } from '../config/contracts';
 
 interface CarbonOffset {
   symbol: string;

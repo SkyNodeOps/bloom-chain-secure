@@ -41,7 +41,7 @@ interface Order {
 export const OrderHistory = () => {
   const { address, isConnected } = useAccount();
   const { instance, isLoading: fheLoading, error: fheError } = useZamaInstance();
-  const { signer } = useEthersSigner();
+  const signerPromise = useEthersSigner();
   const { getCarbonOffsets, getUserCarbonOrderIds, getCarbonOrderEncryptedData, getCarbonOrderInfo } = useContract();
   const [orders, setOrders] = useState<Order[]>([]);
   const [carbonOffsets, setCarbonOffsets] = useState<any[]>([]);
@@ -169,7 +169,7 @@ export const OrderHistory = () => {
   }, [isConnected, address]);
 
   const handleDecryptOrder = async (orderId: string) => {
-    if (!instance || !address || !signer) {
+    if (!instance || !address || !signerPromise) {
       alert('FHE instance, wallet, or signer not ready');
       return;
     }
@@ -194,6 +194,7 @@ export const OrderHistory = () => {
       console.log('📊 Encrypted handles count:', order.encryptedData.handles.length);
       
       console.log('🔄 Step 2: Decrypting order data...');
+      const signer = await signerPromise;
       const decryptedData = await decryptVaultData(
         instance,
         order.encryptedData.handles,

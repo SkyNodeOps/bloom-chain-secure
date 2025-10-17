@@ -1,30 +1,25 @@
-import { useAccount, useWalletClient } from 'wagmi';
 import { useMemo } from 'react';
-import { providers } from 'ethers';
+import { useWalletClient } from 'wagmi';
+import { BrowserProvider, JsonRpcSigner } from 'ethers';
 
-export function useEthersSigner() {
-  const { address, isConnected } = useAccount();
-  const { data: walletClient } = useWalletClient();
+function walletClientToSigner(walletClient: any): Promise<JsonRpcSigner> {
+  const { account, chain, transport } = walletClient;
+  const network = {
+    chainId: chain.id,
+    name: chain.name,
+    ensAddress: chain.contracts?.ensRegistry?.address,
+  };
 
-  const signer = useMemo(() => {
-    if (!walletClient || !address) return null;
-    
-    return {
-      getAddress: () => address,
-      signMessage: async (message: string) => {
-        return await walletClient.signMessage({ message });
-      },
-      signTypedData: async (domain: any, types: any, value: any) => {
-        return await walletClient.signTypedData({
-          account: address as `0x${string}`,
-          domain,
-          types,
-          primaryType: 'UserDecryptRequestVerification',
-          message: value,
-        });
-      },
-    };
-  }, [walletClient, address]);
+  const provider = new BrowserProvider(transport, network);
+  const signer = provider.getSigner(account.address);
+  return signer;
+}
 
-  return { signer, isConnected, address };
+export function useEthersSigner({ chainId }: { chainId?: number } = {}) {
+  const { data: walletClient } = useWalletClient({ chainId });
+
+  return useMemo(
+    () => (walletClient ? walletClientToSigner(walletClient) : undefined),
+    [walletClient]
+  );
 }

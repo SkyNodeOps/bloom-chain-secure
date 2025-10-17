@@ -20,7 +20,7 @@ import { useAccount } from 'wagmi';
 import { useZamaInstance } from '../hooks/useZamaInstance';
 import { useEthersSigner } from '../hooks/useEthersSigner';
 import { useContract } from '../lib/contract';
-import { decryptVaultData } from '../lib/fhe-utils';
+import { decryptVaultData, getCarbonOffsetSymbol } from '../lib/fhe-utils';
 import { CONTRACT_ADDRESS } from '../config/contracts';
 
 interface Order {
@@ -221,12 +221,12 @@ export const OrderHistory = () => {
       console.log('✅ Step 2 completed: Order data decrypted');
       console.log('📊 Decrypted data:', decryptedData);
 
-      // Parse decrypted data
+      // Parse decrypted data - 正确映射碳抵消订单字段
       const parsedData = {
         orderType: decryptedData[order.encryptedData.handles[0]]?.toString() || '1',
         quantity: decryptedData[order.encryptedData.handles[1]]?.toString() || '0',
-        price: decryptedData[order.encryptedData.handles[2]]?.toString() || '0',
-        symbol: decryptedData[order.encryptedData.handles[3]]?.toString() || '0'
+        price: (Number(decryptedData[order.encryptedData.handles[2]]) / 100) || 0, // 转换为美元
+        symbol: getCarbonOffsetSymbol(Number(decryptedData[order.encryptedData.handles[3]]) || 0) // 转换为符号
       };
 
       console.log('🔄 Step 3: Parsing decrypted values...');

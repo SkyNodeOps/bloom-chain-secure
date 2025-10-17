@@ -73,6 +73,17 @@ export function getStringDescription(value: number): string {
   return result ? `${result}...` : 'Unknown';
 }
 
+// Convert carbon offset symbol number to string
+export function getCarbonOffsetSymbol(value: number): string {
+  const symbolMap: Record<number, string> = {
+    0: 'AMAZON',
+    1: 'SOLAR', 
+    2: 'WIND',
+    3: 'OCEAN'
+  };
+  return symbolMap[value] || 'UNKNOWN';
+}
+
 // FHE encryption helper for vault operations
 export async function encryptVaultData(
   instance: any,

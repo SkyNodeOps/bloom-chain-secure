@@ -101,11 +101,14 @@ export const OrderHistory = () => {
           // Get encrypted order data
           const encryptedData = await getCarbonOrderEncryptedData(Number(orderId));
           console.log('📊 Encrypted data handles:', encryptedData.length);
+          console.log('📊 Raw encrypted data:', encryptedData);
           
           // Convert encrypted data to handles format
-          const handles = encryptedData.slice(0, 4).map(handle => 
-            typeof handle === 'string' ? handle : `0x${handle.toString(16).padStart(64, '0')}`
-          );
+          const handles = encryptedData.slice(0, 4).map((handle, index) => {
+            const hexHandle = typeof handle === 'string' ? handle : `0x${handle.toString(16).padStart(64, '0')}`;
+            console.log(`📊 Handle ${index}: ${hexHandle.substring(0, 10)}... (${hexHandle.length} chars)`);
+            return hexHandle;
+          });
           
           // Find matching carbon offset for display
           const matchingOffset = carbonOffsets.find(offset => 
@@ -190,6 +193,15 @@ export const OrderHistory = () => {
       if (order.encryptedData.handles.length === 0 || 
           order.encryptedData.handles.every(handle => handle === '0x0' || handle === '0x0000000000000000000000000000000000000000000000000000000000000000')) {
         throw new Error('No encrypted data available for this order. This may be mock data that cannot be decrypted.');
+      }
+
+      // Check if handles look valid (should be 66 characters including 0x)
+      const invalidHandles = order.encryptedData.handles.filter(handle => 
+        handle.length !== 66 || !handle.startsWith('0x')
+      );
+      if (invalidHandles.length > 0) {
+        console.warn('⚠️ Invalid handles detected:', invalidHandles);
+        throw new Error('Invalid encrypted data format. Handles should be 66 characters long.');
       }
 
       console.log('🔄 Step 1: Preparing encrypted handles...');
